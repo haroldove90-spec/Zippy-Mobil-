@@ -7,6 +7,7 @@ export enum RideStatus {
   ARRIVED = 'ARRIVED',
   PASSENGER_READY = 'PASSENGER_READY',
   IN_PROGRESS = 'IN_PROGRESS',
+  PAYMENT_PENDING = 'PAYMENT_PENDING',
   COMPLETED = 'COMPLETED',
   RATING = 'RATING',
   SCHEDULED = 'SCHEDULED',
@@ -23,6 +24,51 @@ export enum UserRole {
 
 export type ProviderCategory = 'GRUA' | 'AMBULANCIA' | 'SEGURO' | 'MECANICO' | 'LLANTERA';
 
+export type VehicleCategory = 'ECONOMICO' | 'CONFORT' | 'XL';
+
+export type PaymentMethodType = 'cash' | 'card' | 'wallet';
+
+export interface TariffConfig {
+  baseFare: number;
+  costPerKm: number;
+  costPerMin: number;
+  minFare: number;
+  commissionRate: number; // percentage e.g. 15
+  surgeMultiplier: number; // e.g. 1.0
+  categoryMultipliers: Record<VehicleCategory, number>;
+}
+
+export interface GeofenceZone {
+  id: string;
+  name: string;
+  center_lat: number;
+  center_lng: number;
+  radius_km: number;
+  surcharge_percent: number;
+  active: boolean;
+  created_at?: string;
+}
+
+export interface TrustedContact {
+  id: string;
+  name: string;
+  phone: string;
+  relation?: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  user_id: string;
+  user_name?: string;
+  ride_id?: string;
+  category: 'disputa' | 'objeto_perdido' | 'reembolso' | 'soporte';
+  subject: string;
+  description: string;
+  status: 'open' | 'in_review' | 'resolved' | 'refunded';
+  refund_amount?: number;
+  created_at?: string;
+}
+
 export interface Ride {
   id: string;
   passenger_id: string;
@@ -33,6 +79,17 @@ export interface Ride {
   status: RideStatus;
   created_at?: string;
   scheduled_for?: string;
+  // Security & Lifecycle Fields
+  pin_code?: string;
+  vehicle_category?: VehicleCategory;
+  distance_km?: number;
+  estimated_minutes?: number;
+  base_fare?: number;
+  distance_fare?: number;
+  time_fare?: number;
+  arrived_at?: string;
+  started_at?: string;
+  completed_at?: string;
   // SOS Fields
   sos_active?: boolean;
   sos_triggered_by?: string;
@@ -41,13 +98,16 @@ export interface Ride {
   sos_lng?: number;
   // Payment Logic
   is_paid?: boolean;
+  payment_confirmed_by_driver?: boolean;
   tip_amount?: number;
-  payment_method?: 'cash' | 'card';
+  payment_method?: PaymentMethodType;
   total_paid?: number;
-  // For history detail view
+  // For history detail & ratings
   driver_name?: string;
   driver_avatar_url?: string;
   rating_given?: number;
+  rating_tags?: string[];
+  driver_rating_for_passenger?: number;
   // GPS fields (optional for display)
   driver_lat?: number;
   driver_lng?: number;
@@ -61,10 +121,11 @@ export interface Ride {
 export interface RideRequest {
   pickup: string;
   destination: string;
-  price: number; 
+  price: number;
   distance: number;
   vehicleType: 'basic' | 'comfort';
-  paymentMethod: 'cash' | 'card';
+  vehicleCategory?: VehicleCategory;
+  paymentMethod: PaymentMethodType;
   scheduledTime?: string;
   pin?: string;
 }
@@ -77,6 +138,7 @@ export interface DriverTarifa {
   rating: number;
   carModel: string;
   carPlate: string;
+  carColor?: string;
   taxiNumber: string;
   price: number;
   eta: number;
@@ -96,6 +158,9 @@ export interface DriverDocuments {
   insurance?: string;
   id_card?: string;
   vehicle_registration?: string;
+  background_check?: string;
+  license_expiry?: string;
+  insurance_expiry?: string;
 }
 
 export interface UserProfile {
@@ -106,11 +171,17 @@ export interface UserProfile {
   avatar_url?: string;
   rating: number;
   role: string;
+  status?: string;
   car_model?: string;
   car_plate?: string;
+  car_color?: string;
   taxi_number?: string;
-  verification_status?: 'verified' | 'pending' | 'rejected' | 'unverified';
+  verification_status?: 'verified' | 'pending' | 'rejected' | 'unverified' | 'suspended';
+  is_suspended?: boolean;
+  debt_amount?: number;
+  wallet_balance?: number;
   documents?: DriverDocuments;
+  trusted_contacts?: TrustedContact[];
   lat?: number;
   lng?: number;
   is_online?: boolean;
@@ -122,6 +193,7 @@ export interface UserProfile {
   // Saved Addresses
   saved_home?: string;
   saved_work?: string;
+  created_at?: string;
 }
 
 export interface MapEntity {
@@ -148,6 +220,11 @@ export interface DriverApplication {
   ine_front_url?: string;
   car_photo_front_url?: string;
   car_photo_back_url?: string;
+  circulation_card_url?: string;
+  insurance_policy_url?: string;
+  background_check_url?: string;
+  license_expiry?: string;
+  insurance_expiry?: string;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
 }

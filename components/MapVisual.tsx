@@ -9,25 +9,40 @@ interface MapVisualProps {
   status: string;
   userLocation?: [number, number]; // [lat, lng] Pasajero
   driverLocation?: [number, number]; // [lat, lng] Conductor
-  entities?: MapEntity[]; 
-  routeStart?: [number, number]; 
+  entities?: MapEntity[];
+  routeStart?: [number, number];
   routeEnd?: [number, number];
   gpsAccuracy?: number; // Nueva prop para precisión
+  draggablePickup?: boolean;
+  onPickupPinDragEnd?: (coords: [number, number]) => void;
 }
 
 // Icono de Auto Amarillo Zippy (SVG Path Optimizado)
 const CAR_ICON_PATH = "M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-0.66 0-1.21 0.42-1.42 1.01L3 12v8c0 0.55 0.45 1 1 1h1c0.55 0 1-0.45 1-1v-1h12v1c0 0.55 0.45 1 1 1h1c0.55 0 1-0.45 1-1v-8l-2.08-5.99zM6.5 16c-0.83 0-1.5-0.67-1.5-1.5S5.67 13 6.5 13s1.5 0.67 1.5 1.5S7.33 16 6.5 16zM17.5 16c-0.83 0-1.5-0.67-1.5-1.5s0.67-1.5 1.5-1.5 1.5 0.67 1.5 1.5 -0.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z";
 
-const MapVisual: React.FC<MapVisualProps> = ({ status, userLocation, driverLocation, entities, routeStart, routeEnd, gpsAccuracy = 0 }) => {
+const MapVisual: React.FC<MapVisualProps> = ({
+  status,
+  userLocation,
+  driverLocation,
+  entities,
+  routeStart,
+  routeEnd,
+  gpsAccuracy = 0,
+  draggablePickup = false,
+  onPickupPinDragEnd,
+}) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
-  
+
   const userMarkerRef = useRef<any>(null);
   const driverMarkerRef = useRef<any>(null);
-  const accuracyCircleRef = useRef<any>(null); 
+  const entityMarkersRef = useRef<any[]>([]);
+  const accuracyCircleRef = useRef<any>(null);
   const directionsRendererRef = useRef<any>(null);
   const hasCenteredRef = useRef<boolean>(false);
-  
+  const hasFittedEntitiesRef = useRef<boolean>(false);
+  const dragListenerRef = useRef<any>(null);
+
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isUserInteracting, setIsUserInteracting] = useState(false);
 
@@ -48,7 +63,7 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, userLocation, driverLocat
         disableDefaultUI: true,
         zoomControl: false,
         clickableIcons: false,
-        gestureHandling: 'greedy', 
+        gestureHandling: 'greedy',
         styles: [
             { "featureType": "poi", "elementType": "labels", "stylers": [{ "visibility": "off" }] },
             { "featureType": "transit", "elementType": "labels", "stylers": [{ "visibility": "off" }] }
@@ -63,9 +78,9 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, userLocation, driverLocat
     const renderer = new google.maps.DirectionsRenderer({
         map: map,
         suppressMarkers: true,
-        preserveViewport: true, 
+        preserveViewport: true,
         polylineOptions: {
-            strokeColor: '#003A70', 
+            strokeColor: '#003A70',
             strokeWeight: 6,
             strokeOpacity: 0.8
         }
@@ -75,33 +90,32 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, userLocation, driverLocat
     setMapLoaded(true);
   }, []);
 
-  // 2. Marcador del Usuario Principal (Depende del Rol)
+  // 2. Marcador del Usuario Principal (Depende del Rol) + Soporte de Pin Arrastrable
   useEffect(() => {
       if (!mapInstanceRef.current || !mapLoaded) return;
       if (!userLocation) return;
 
       const pos = { lat: userLocation[0], lng: userLocation[1] };
-      
+
       // Si driverLocation es idéntico a userLocation, asumimos que es la vista del Conductor
-      // O si driverLocation no está definido, asumimos vista Pasajero inicial
       const isDriverView = userLocation === driverLocation;
 
       // Icono: Auto Amarillo para Conductor, Punto Azul para Pasajero
       const iconConfig = isDriverView ? {
           path: CAR_ICON_PATH,
-          scale: 2, 
-          fillColor: "#FDCA01", // AMARILLO ZIPPY
+          scale: 2,
+          fillColor: "#FDCA01",
           fillOpacity: 1,
           strokeWeight: 2,
           strokeColor: "#000000",
           anchor: new google.maps.Point(12, 12)
       } : {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
+          scale: draggablePickup ? 10 : 8,
           fillColor: "#4285F4",
           fillOpacity: 1,
           strokeColor: "white",
-          strokeWeight: 2,
+          strokeWeight: 3,
       };
 
       if (!userMarkerRef.current) {
@@ -109,15 +123,30 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, userLocation, driverLocat
               position: pos,
               map: mapInstanceRef.current,
               icon: iconConfig,
+              draggable: !isDriverView && draggablePickup,
               zIndex: 100,
-              title: "Tú"
+              title: !isDriverView && draggablePickup ? "Arrastra para ajustar punto de recogida" : "Tú"
           });
       } else {
           userMarkerRef.current.setPosition(pos);
           userMarkerRef.current.setIcon(iconConfig);
+          userMarkerRef.current.setDraggable(!isDriverView && draggablePickup);
       }
 
-      // Círculo de Precisión (Solo útil para ver radio de GPS)
+      if (dragListenerRef.current) {
+          google.maps.event.removeListener(dragListenerRef.current);
+          dragListenerRef.current = null;
+      }
+
+      if (!isDriverView && draggablePickup && onPickupPinDragEnd && userMarkerRef.current) {
+          dragListenerRef.current = userMarkerRef.current.addListener('dragend', (evt: any) => {
+              if (evt?.latLng) {
+                  onPickupPinDragEnd([evt.latLng.lat(), evt.latLng.lng()]);
+              }
+          });
+      }
+
+      // Círculo de Precisión
       if (!accuracyCircleRef.current) {
           accuracyCircleRef.current = new google.maps.Circle({
               strokeColor: "#4285F4",
@@ -133,7 +162,7 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, userLocation, driverLocat
           accuracyCircleRef.current.setCenter(pos);
           accuracyCircleRef.current.setRadius(gpsAccuracy);
       }
-      
+
       // Centrado Inicial
       if (!hasCenteredRef.current) {
           mapInstanceRef.current.panTo(pos);
@@ -141,32 +170,32 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, userLocation, driverLocat
           hasCenteredRef.current = true;
       }
 
-  }, [userLocation, gpsAccuracy, mapLoaded, isUserInteracting, driverLocation]);
+  }, [userLocation, gpsAccuracy, mapLoaded, isUserInteracting, driverLocation, draggablePickup, onPickupPinDragEnd]);
 
   // 3. Marcador del "Otro" (El Taxi que ve el Pasajero)
   useEffect(() => {
       if (!mapInstanceRef.current || !mapLoaded) return;
 
       // Solo dibujar este marcador si NO somos el conductor (user != driver)
-      if (userLocation === driverLocation) return; 
+      if (userLocation === driverLocation) return;
 
       if (driverLocation && driverLocation[0] !== 0) {
           const pos = { lat: driverLocation[0], lng: driverLocation[1] };
-          
+
           if (!driverMarkerRef.current) {
               driverMarkerRef.current = new google.maps.Marker({
                   position: pos,
                   map: mapInstanceRef.current,
                   icon: {
                       path: CAR_ICON_PATH,
-                      scale: 2, // TAXI AMARILLO GRANDE
-                      fillColor: "#FDCA01", 
+                      scale: 2,
+                      fillColor: "#FDCA01",
                       fillOpacity: 1,
                       strokeWeight: 2,
                       strokeColor: "#000000",
                       anchor: new google.maps.Point(12, 12)
                   },
-                  zIndex: 200, // Encima del punto azul
+                  zIndex: 200,
                   title: "Tu Zippy"
               });
           } else {
@@ -177,6 +206,67 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, userLocation, driverLocat
           if (driverMarkerRef.current) driverMarkerRef.current.setMap(null);
       }
   }, [driverLocation, userLocation, mapLoaded]);
+
+  // 3B. Renderizado de Entidades (Vista de Dios Admin y Conductores Cercanos Pasajero)
+  useEffect(() => {
+      if (!mapInstanceRef.current || !mapLoaded) return;
+
+      // Limpiar marcadores previos
+      entityMarkersRef.current.forEach((m) => m.setMap(null));
+      entityMarkersRef.current = [];
+
+      if (!entities || entities.length === 0) return;
+
+      const bounds = new google.maps.LatLngBounds();
+      let validCount = 0;
+
+      entities.forEach((entity) => {
+          if (!entity.lat || !entity.lng || (entity.lat === 0 && entity.lng === 0)) return;
+          validCount++;
+          const pos = { lat: entity.lat, lng: entity.lng };
+          bounds.extend(pos);
+
+          const isSos = entity.status === 'SOS';
+          const isOnlineFree = entity.status === 'online';
+          const fillColor = isSos ? '#DC2626' : isOnlineFree ? '#22C55E' : '#FDCA01';
+
+          const marker = new google.maps.Marker({
+              position: pos,
+              map: mapInstanceRef.current,
+              title: entity.label,
+              zIndex: isSos ? 300 : 150,
+              icon: {
+                  path: CAR_ICON_PATH,
+                  scale: isSos ? 2.2 : 1.7,
+                  fillColor,
+                  fillOpacity: 1,
+                  strokeWeight: 2,
+                  strokeColor: isSos ? '#FFFFFF' : '#003A70',
+                  anchor: new google.maps.Point(12, 12),
+              },
+          });
+
+          const infoWindow = new google.maps.InfoWindow({
+              content: `<div style="font-family:Inter,sans-serif;font-size:12px;font-weight:700;color:#003A70;padding:2px 4px;">${entity.label}</div>`,
+          });
+
+          marker.addListener('click', () => {
+              infoWindow.open(mapInstanceRef.current, marker);
+          });
+
+          entityMarkersRef.current.push(marker);
+      });
+
+      if (status === 'live_map' && validCount > 0 && !hasFittedEntitiesRef.current && !isUserInteracting) {
+          if (validCount === 1) {
+              mapInstanceRef.current.panTo(bounds.getCenter());
+              mapInstanceRef.current.setZoom(14);
+          } else {
+              mapInstanceRef.current.fitBounds(bounds, { top: 80, right: 60, bottom: 80, left: 60 });
+          }
+          hasFittedEntitiesRef.current = true;
+      }
+  }, [entities, mapLoaded, status, isUserInteracting]);
 
   // 4. Ruta
   useEffect(() => {
@@ -209,7 +299,7 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, userLocation, driverLocat
           bounds.extend({ lat: userLocation[0], lng: userLocation[1] });
           points++;
       }
-      
+
       if (driverLocation && driverLocation[0] !== 0 && (status === 'ACCEPTED' || status === 'ARRIVED' || status === 'IN_PROGRESS')) {
           bounds.extend({ lat: driverLocation[0], lng: driverLocation[1] });
           points++;
@@ -239,7 +329,7 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, userLocation, driverLocat
   return (
     <div className="absolute inset-0 w-full h-full z-0">
         <div ref={mapContainerRef} className="w-full h-full bg-gray-100" />
-        
+
         {!mapLoaded && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-20">
                 <div className="flex flex-col items-center">
@@ -251,8 +341,8 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, userLocation, driverLocat
             </div>
         )}
 
-        {mapLoaded && userLocation && (status !== 'ADMIN') && (
-            <button 
+        {mapLoaded && userLocation && (status !== 'ADMIN' && status !== 'live_map') && (
+            <button
                 onClick={handleRecenter}
                 className="absolute right-4 bottom-32 z-[1] p-3 bg-white text-zippy-dark rounded-full shadow-xl border border-gray-200 active:scale-95 transition-transform"
                 title="Mi Ubicación"
@@ -260,7 +350,7 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, userLocation, driverLocat
                 <Crosshair className="w-6 h-6" />
             </button>
         )}
-        
+
         <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white/90 to-transparent pointer-events-none z-0"></div>
     </div>
   );
