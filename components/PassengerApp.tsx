@@ -1076,6 +1076,9 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
 
   const resolveLoginEmail = (identifier: string): string => {
     const trimmed = identifier.trim().toLowerCase();
+    if (trimmed === 'pasajero_1' || trimmed === 'pasajero_1@zippy.app') {
+      return 'pasejero_1@zippy.app';
+    }
     return trimmed.includes('@') ? trimmed : `${trimmed}@zippy.app`;
   };
 
