@@ -252,7 +252,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
 
   const hydrateDriverProfile = useCallback(async (userId: string) => {
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
-    if (!profile) return;
+    if (!profile || (profile.role && profile.role !== 'DRIVER')) return;
     setDriverProfile((prev) => ({
       ...prev,
       id: userId,
@@ -292,6 +292,19 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
     };
     checkSession();
   }, [hydrateDriverProfile]);
+
+  const handleDriverLogout = useCallback(async (): Promise<void> => {
+    try {
+      if (driverProfile.id && isOnline) {
+        await supabase.from('profiles').update({ status: 'offline' }).eq('id', driverProfile.id);
+      }
+    } catch (err: unknown) {
+      console.error('Error al desconectar conductor:', err);
+    }
+    setIsOnline(false);
+    setIsAuthenticated(false);
+    onBack();
+  }, [driverProfile.id, isOnline, onBack]);
 
   // --- CLEAN MEMORY RESET ---
   const handleResetToIdle = useCallback(() => {
@@ -1418,7 +1431,8 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
         </button>
 
         <button
-          onClick={onBack}
+          type="button"
+          onClick={handleDriverLogout}
           className="w-full py-4 rounded-2xl bg-red-50 text-red-600 font-black text-sm uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
         >
           <LogOut size={18} /> Cerrar Sesión
@@ -1557,7 +1571,13 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
 
   if (!isAuthenticated) {
     return (
-      <div className="w-full h-full bg-zippy-dark flex flex-col items-center justify-center p-6 animate-fade-in">
+      <div className="w-full h-screen h-[100dvh] bg-zippy-dark flex flex-col items-center justify-center p-6 animate-fade-in overflow-y-auto">
+        <NotificationToast
+          message={toast.msg}
+          type={toast.type}
+          isVisible={toast.visible}
+          onClose={() => setToast({ ...toast, visible: false })}
+        />
         <img src="https://tritex.com.mx/zippylogo.png" className="h-12 mb-8 filter invert" />
         <div className="bg-white p-6 rounded-[32px] w-full max-w-sm shadow-2xl relative overflow-hidden">
           <h2 className="text-lg font-black text-center text-zippy-dark mb-4 uppercase tracking-widest">
@@ -1640,7 +1660,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="w-full h-full bg-gray-100 flex flex-col relative overflow-hidden font-sans">
+    <div className="w-full h-screen h-[100dvh] bg-gray-100 flex flex-col relative overflow-hidden font-sans">
       <NotificationToast
         message={toast.msg}
         type={toast.type}
@@ -1744,14 +1764,25 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
             </span>
           </div>
         </div>
-        <button
-          onClick={toggleOnline}
-          className={`px-8 py-3 rounded-2xl font-black text-[10px] uppercase transition-all shadow-xl active:scale-95 ${
-            isOnline ? 'bg-red-600 text-white' : 'bg-blue-700 text-white'
-          }`}
-        >
-          {isOnline ? 'Finalizar' : 'Iniciar'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleOnline}
+            className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase transition-all shadow-xl active:scale-95 ${
+              isOnline ? 'bg-red-600 text-white' : 'bg-blue-700 text-white'
+            }`}
+          >
+            {isOnline ? 'Finalizar' : 'Iniciar'}
+          </button>
+          <button
+            type="button"
+            onClick={handleDriverLogout}
+            title="Cerrar Sesión"
+            className="p-3 rounded-2xl bg-red-50 text-red-600 hover:bg-red-100 shadow-md active:scale-95 transition-all"
+          >
+            <LogOut size={18} />
+          </button>
+        </div>
       </div>
 
       {/* ACCOUNT STATUS BANNER */}

@@ -191,6 +191,19 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
       }
   };
 
+  const handleProviderLogout = async (): Promise<void> => {
+      try {
+          if (userId && isOnline) {
+              await supabase.from('profiles').update({ status: 'offline' }).eq('id', userId);
+          }
+      } catch (err: unknown) {
+          console.error('Error al desconectar proveedor:', err);
+      }
+      setIsOnline(false);
+      setIsAuthenticated(false);
+      onBack();
+  };
+
   const handleAcceptRequest = (id: string) => {
       alert(`Servicio #${id} aceptado. Contactando al cliente...`);
       setRequests(prev => prev.filter(r => r.id !== id));
@@ -243,7 +256,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
 
   if (!isAuthenticated) {
       return (
-          <div className="w-full h-full bg-gray-50 flex flex-col items-center justify-center p-6 overflow-y-auto">
+          <div className="w-full h-screen h-[100dvh] bg-gray-50 flex flex-col items-center justify-center p-6 overflow-y-auto">
              <div className="w-full max-w-sm">
                 <div className="text-center mb-6">
                     <div className="w-16 h-16 bg-orange-500 rounded-3xl mx-auto flex items-center justify-center shadow-2xl mb-3 animate-bounce">
@@ -296,7 +309,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
   const serviceConfig = SERVICE_OPTIONS.find(s => s.id === (profile?.service_type || 'GRUA')) || SERVICE_OPTIONS[0];
 
   return (
-    <div className="w-full h-full bg-gray-50 flex flex-col font-sans overflow-hidden">
+    <div className="w-full h-screen h-[100dvh] bg-gray-50 flex flex-col font-sans overflow-hidden">
         {/* Modern Header */}
         <div className={`p-8 pb-14 rounded-b-[50px] shadow-2xl transition-all duration-700 relative ${isOnline ? serviceConfig.color : 'bg-gray-800'}`}>
             <div className="absolute top-0 right-0 p-10 opacity-10"><serviceConfig.icon size={150} /></div>
@@ -321,7 +334,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
                         <span className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em]">{serviceConfig.label}</span>
                     </div>
                 </div>
-                <button onClick={onBack} className="bg-white/10 p-3 rounded-2xl text-white backdrop-blur-sm"><LogOut size={20} /></button>
+                <button type="button" onClick={handleProviderLogout} title="Cerrar Sesión" className="bg-white/15 hover:bg-white/25 px-3 py-3 rounded-2xl text-white backdrop-blur-sm flex items-center gap-2 text-xs font-black uppercase transition-colors cursor-pointer"><LogOut size={18} /><span className="hidden sm:inline">Salir</span></button>
             </div>
             
             {/* Show Save Button if avatar changed */}

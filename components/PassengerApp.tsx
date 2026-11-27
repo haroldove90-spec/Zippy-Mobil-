@@ -544,7 +544,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
   const hydrateUserProfile = useCallback(
     async (userId: string) => {
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      if (!profile) return;
+      if (!profile || (profile.role && profile.role !== 'PASSENGER')) return;
 
       if (profile.is_suspended) {
         showToast('Tu cuenta se encuentra suspendida. Contacta a soporte.', 'error');
@@ -2132,7 +2132,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
   );
 
   return (
-    <div className="relative w-full h-full bg-gray-100 overflow-hidden flex flex-col font-sans">
+    <div className="relative w-full h-screen h-[100dvh] bg-gray-100 overflow-hidden flex flex-col font-sans">
       <NotificationToast
         message={toast.msg}
         type={toast.type}
@@ -2618,7 +2618,9 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
           </button>
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={onBack}
+              title="Cerrar Sesión"
               className="p-4 bg-white shadow-xl rounded-2xl text-red-500 active:scale-90 transition-transform"
             >
               <LogOut size={24} />
