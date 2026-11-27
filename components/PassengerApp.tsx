@@ -1074,19 +1074,34 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
     }
   };
 
+  const resolveLoginEmail = (identifier: string): string => {
+    const trimmed = identifier.trim().toLowerCase();
+    return trimmed.includes('@') ? trimmed : `${trimmed}@zippy.app`;
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       if (authMode === 'login') {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const loginEmail = resolveLoginEmail(email);
+        const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
         if (error) throw error;
         if (data.user) {
+          const { data: roleCheck } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single();
+          if (roleCheck?.role && roleCheck.role !== 'PASSENGER') {
+            await supabase.auth.signOut();
+            throw new Error('Esta cuenta no corresponde al perfil de Pasajero.');
+          }
           await hydrateUserProfile(data.user.id);
         }
       } else {
         const { error } = await supabase.auth.signUp({
-          email,
+          email: email.trim().toLowerCase(),
           password,
           options: { data: { full_name: fullName, role: 'PASSENGER' } },
         });
@@ -2750,8 +2765,8 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
               )}
               <input
                 required
-                type="email"
-                placeholder="Correo Electrónico"
+                type={authMode === 'login' ? 'text' : 'email'}
+                placeholder={authMode === 'login' ? 'Usuario o Correo Electrónico' : 'Correo Electrónico'}
                 className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-sm outline-none focus:border-zippy-main transition-colors"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

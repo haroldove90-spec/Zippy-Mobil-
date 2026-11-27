@@ -40,6 +40,15 @@ ALTER TABLE public.rides
 
 -- 4. COLUMNAS EXTENDIDAS EN PROFILES Y DRIVER_APPLICATIONS
 ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS email TEXT,
+  ADD COLUMN IF NOT EXISTS full_name TEXT,
+  ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'PASSENGER',
+  ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'offline',
+  ADD COLUMN IF NOT EXISTS verification_status TEXT DEFAULT 'unverified',
+  ADD COLUMN IF NOT EXISTS service_type TEXT,
+  ADD COLUMN IF NOT EXISTS taxi_number TEXT,
+  ADD COLUMN IF NOT EXISTS car_model TEXT,
+  ADD COLUMN IF NOT EXISTS car_plate TEXT,
   ADD COLUMN IF NOT EXISTS car_color TEXT,
   ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN DEFAULT FALSE,
   ADD COLUMN IF NOT EXISTS debt_amount NUMERIC DEFAULT 0,
@@ -309,4 +318,193 @@ BEGIN
       role = 'ADMIN',
       full_name = COALESCE(public.profiles.full_name, EXCLUDED.full_name);
 END $$;
+
+-- 8. CREDENCIALES OPERATIVAS (Pasajero, Conductor y Proveedor con hash bcrypt único)
+DO $$
+DECLARE
+  v_user_id UUID;
+  v_rec RECORD;
+BEGIN
+  FOR v_rec IN
+    SELECT *
+    FROM (
+      VALUES
+        (
+          'pasejero_1',
+          'pasejero_1@zippy.app',
+          'Pasajero 1',
+          'PASSENGER',
+          '$2a$10$bwNmbTUxue8JDhp.SVE0c.5iYC9gIF45/8UMnHSx0JcDRYbU5HoQi',
+          'unverified',
+          NULL::TEXT,
+          NULL::TEXT,
+          NULL::TEXT,
+          NULL::TEXT,
+          NULL::TEXT
+        ),
+        (
+          'conductor_1',
+          'conductor_1@zippy.app',
+          'Conductor 1',
+          'DRIVER',
+          '$2a$10$hXxpOf2aFHeM.L.dziUKvOBss1f7U4rpvo2wC/5KAFyYePxv4xpoy',
+          'verified',
+          NULL::TEXT,
+          'Z-101',
+          'Nissan Versa',
+          'ZPY-101',
+          'Blanco'
+        ),
+        (
+          'proveedor_1',
+          'proveedor_1@zippy.app',
+          'Proveedor 1',
+          'PROVIDER',
+          '$2a$10$TPW9cdobkZVWtYdfrhwPq.pHWfZAay.fyb7jydNeVgs4mJ9uVPbLa',
+          'verified',
+          'GRUA',
+          NULL::TEXT,
+          NULL::TEXT,
+          NULL::TEXT,
+          NULL::TEXT
+        )
+    ) AS t(
+      username,
+      email,
+      full_name,
+      role,
+      password_hash,
+      verification_status,
+      service_type,
+      taxi_number,
+      car_model,
+      car_plate,
+      car_color
+    )
+  LOOP
+    SELECT id INTO v_user_id FROM auth.users WHERE email = v_rec.email LIMIT 1;
+
+    IF v_user_id IS NULL THEN
+      v_user_id := gen_random_uuid();
+
+      INSERT INTO auth.users (
+        instance_id,
+        id,
+        aud,
+        role,
+        email,
+        encrypted_password,
+        email_confirmed_at,
+        raw_app_meta_data,
+        raw_user_meta_data,
+        created_at,
+        updated_at,
+        confirmation_token,
+        email_change,
+        email_change_token_new,
+        recovery_token
+      )
+      VALUES (
+        '00000000-0000-0000-0000-000000000000',
+        v_user_id,
+        'authenticated',
+        'authenticated',
+        v_rec.email,
+        v_rec.password_hash,
+        NOW(),
+        '{"provider":"email","providers":["email"]}'::jsonb,
+        jsonb_build_object(
+          'full_name', v_rec.full_name,
+          'username', v_rec.username,
+          'role', v_rec.role
+        ),
+        NOW(),
+        NOW(),
+        '',
+        '',
+        '',
+        ''
+      );
+
+      INSERT INTO auth.identities (
+        id,
+        user_id,
+        provider_id,
+        identity_data,
+        provider,
+        last_sign_in_at,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        gen_random_uuid(),
+        v_user_id,
+        v_user_id::text,
+        jsonb_build_object(
+          'sub', v_user_id::text,
+          'email', v_rec.email,
+          'email_verified', true,
+          'phone_verified', false
+        ),
+        'email',
+        NOW(),
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT DO NOTHING;
+    ELSE
+      UPDATE auth.users
+      SET encrypted_password = v_rec.password_hash,
+          email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
+          raw_user_meta_data = COALESCE(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object(
+            'full_name', v_rec.full_name,
+            'username', v_rec.username,
+            'role', v_rec.role
+          ),
+          updated_at = NOW()
+      WHERE id = v_user_id;
+    END IF;
+
+    INSERT INTO public.profiles (
+      id,
+      email,
+      full_name,
+      role,
+      status,
+      verification_status,
+      service_type,
+      taxi_number,
+      car_model,
+      car_plate,
+      car_color,
+      is_suspended
+    )
+    VALUES (
+      v_user_id,
+      v_rec.email,
+      v_rec.full_name,
+      v_rec.role,
+      'offline',
+      v_rec.verification_status,
+      v_rec.service_type,
+      v_rec.taxi_number,
+      v_rec.car_model,
+      v_rec.car_plate,
+      v_rec.car_color,
+      FALSE
+    )
+    ON CONFLICT (id) DO UPDATE
+    SET email = EXCLUDED.email,
+        role = EXCLUDED.role,
+        full_name = COALESCE(public.profiles.full_name, EXCLUDED.full_name),
+        verification_status = EXCLUDED.verification_status,
+        service_type = COALESCE(public.profiles.service_type, EXCLUDED.service_type),
+        taxi_number = COALESCE(public.profiles.taxi_number, EXCLUDED.taxi_number),
+        car_model = COALESCE(public.profiles.car_model, EXCLUDED.car_model),
+        car_plate = COALESCE(public.profiles.car_plate, EXCLUDED.car_plate),
+        car_color = COALESCE(public.profiles.car_color, EXCLUDED.car_color),
+        is_suspended = FALSE;
+  END LOOP;
+END $$;
+
 

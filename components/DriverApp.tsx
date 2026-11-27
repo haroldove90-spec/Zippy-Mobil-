@@ -674,19 +674,34 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
     showToast,
   ]);
 
+  const resolveLoginEmail = (identifier: string): string => {
+    const trimmed = identifier.trim().toLowerCase();
+    return trimmed.includes('@') ? trimmed : `${trimmed}@zippy.app`;
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       if (authMode === 'login') {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const loginEmail = resolveLoginEmail(email);
+        const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
         if (error) throw error;
         if (data.user) {
+          const { data: roleCheck } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single();
+          if (roleCheck?.role && roleCheck.role !== 'DRIVER') {
+            await supabase.auth.signOut();
+            throw new Error('Esta cuenta no corresponde al perfil de Conductor.');
+          }
           await hydrateDriverProfile(data.user.id);
         }
       } else {
         const { error } = await supabase.auth.signUp({
-          email,
+          email: email.trim().toLowerCase(),
           password,
           options: { data: { full_name: fullName, role: 'DRIVER' } },
         });
@@ -1560,8 +1575,8 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
             )}
             <input
               required
-              type="email"
-              placeholder="Correo Electrónico"
+              type={authMode === 'login' ? 'text' : 'email'}
+              placeholder={authMode === 'login' ? 'Usuario o Correo Electrónico' : 'Correo Electrónico'}
               className="w-full p-3 bg-gray-50 border rounded-xl font-bold text-sm"
               value={email}
               onChange={(e) => setEmail(e.target.value)}

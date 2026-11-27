@@ -92,23 +92,28 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
       }
   };
 
+  const resolveLoginEmail = (identifier: string): string => {
+      const trimmed = identifier.trim().toLowerCase();
+      return trimmed.includes('@') ? trimmed : `${trimmed}@zippy.app`;
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
       e.preventDefault();
       setLoading(true);
       
       try {
-          // Validate email format
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailRegex.test(email)) {
-             throw new Error("Formato de correo inválido. Debes usar una dirección real (ej: usuario@gmail.com).");
-          }
 
           if (authMode === 'register') {
+              const normalizedEmail = email.trim().toLowerCase();
+              if (!emailRegex.test(normalizedEmail)) {
+                 throw new Error("Formato de correo inválido. Debes usar una dirección real (ej: usuario@gmail.com).");
+              }
               if (password.length < 6) throw new Error("La contraseña debe ser mayor a 6 dígitos.");
               if (!businessName.trim()) throw new Error("Nombre de negocio obligatorio.");
 
               const { data, error } = await supabase.auth.signUp({ 
-                  email, 
+                  email: normalizedEmail, 
                   password,
                   options: {
                       data: { 
@@ -124,7 +129,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
               if (data.user) {
                   const { error: profileError } = await supabase.from('profiles').upsert({
                       id: data.user.id, 
-                      email, 
+                      email: normalizedEmail, 
                       full_name: businessName, 
                       phone, 
                       role: 'PROVIDER', 
@@ -145,7 +150,11 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
                   }
               }
           } else {
-              const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+              const loginEmail = resolveLoginEmail(email);
+              if (!emailRegex.test(loginEmail)) {
+                 throw new Error("Ingresa un usuario o correo electrónico válido.");
+              }
+              const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
               if (error) throw error;
 
               if (data.user) {
@@ -263,7 +272,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
                         </>
                     )}
                     
-                    <input required type="email" value={email} onChange={e=>setEmail(e.target.value)} className="w-full bg-gray-50 p-3 rounded-xl outline-none border border-gray-100 focus:border-orange-500 font-bold text-sm" placeholder="Correo Electrónico" />
+                    <input required type={authMode === 'login' ? 'text' : 'email'} value={email} onChange={e=>setEmail(e.target.value)} className="w-full bg-gray-50 p-3 rounded-xl outline-none border border-gray-100 focus:border-orange-500 font-bold text-sm" placeholder={authMode === 'login' ? 'Usuario o Correo Electrónico' : 'Correo Electrónico'} />
                     
                     <div className="relative">
                         <input required type={showPassword ? "text" : "password"} value={password} onChange={e=>setPassword(e.target.value)} className="w-full bg-gray-50 p-3 rounded-xl outline-none border border-gray-100 focus:border-orange-500 font-bold text-sm" placeholder="Contraseña" />
