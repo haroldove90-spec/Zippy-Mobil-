@@ -191,10 +191,18 @@ function App() {
     }
   };
 
-  const handleBackToHome = () => {
+  const handleBackToHome = async (): Promise<void> => {
     // Clear all persistence on explicit logout
     localStorage.removeItem('zippy-admin-logged');
-    supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err: unknown) {
+      console.error('Error al cerrar sesión:', err);
+    }
+    setAdminUser('');
+    setAdminPass('');
+    setAdminError(null);
+    setShowAdminLogin(false);
     setRole(null);
   };
 

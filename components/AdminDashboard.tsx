@@ -505,7 +505,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
   return (
     <div
-      className={`w-full h-full bg-gray-50 flex relative overflow-hidden font-sans transition-all duration-300 ${
+      className={`w-full h-screen h-[100dvh] bg-gray-50 flex relative overflow-hidden font-sans transition-all duration-300 ${
         hasSosAlert ? 'ring-8 ring-red-600 ring-inset' : ''
       }`}
     >
@@ -514,17 +514,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
       )}
 
       <div
-        className={`fixed md:relative inset-y-0 left-0 z-50 w-72 bg-zippy-main flex flex-col transition-transform duration-500 border-r border-zippy-dark/5 shadow-2xl ${
+        className={`fixed md:relative inset-y-0 left-0 z-50 w-72 h-full max-h-full min-h-0 shrink-0 bg-zippy-main flex flex-col transition-transform duration-500 border-r border-zippy-dark/5 shadow-2xl ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
-        <div className="p-6 flex justify-between items-center">
+        <div className="p-6 shrink-0 flex justify-between items-center">
           <img src="https://tritex.com.mx/zippylogo.png" alt="Zippy Admin" className="h-9 object-contain" />
           <button onClick={() => setSidebarOpen(false)} className="md:hidden text-zippy-dark">
             <X />
           </button>
         </div>
-        <nav className="flex-1 px-4 overflow-y-auto">
+        <nav className="flex-1 min-h-0 px-4 overflow-y-auto overscroll-contain">
           <p className="text-[10px] font-black text-zippy-dark/40 uppercase tracking-[0.2em] mb-3 px-4">
             Centro de Control
           </p>
@@ -543,18 +543,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
           />
           <SidebarItem id="push" icon={BellRing} label="Push Masivo" />
         </nav>
-        <div className="p-5">
+        <div className="p-5 shrink-0 border-t border-zippy-dark/10">
           <button
+            type="button"
             onClick={onBack}
-            className="w-full flex items-center justify-center gap-3 p-3.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-3xl font-black transition-colors text-xs uppercase"
+            className="w-full flex items-center justify-center gap-3 p-3.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-3xl font-black transition-colors text-xs uppercase cursor-pointer"
           >
             <LogOut size={18} /> SALIR
           </button>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white p-5 shadow-sm flex justify-between items-center z-10">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
+        <header className="bg-white p-5 shrink-0 shadow-sm flex justify-between items-center z-10">
           <div className="flex items-center gap-4">
             <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-zippy-dark">
               <Menu />
@@ -571,14 +572,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
               </button>
             )}
           </div>
-          <div className="w-10 h-10 bg-zippy-dark rounded-2xl flex items-center justify-center text-white font-black">
-            AD
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onBack}
+              title="Cerrar sesión"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-black text-xs uppercase transition-colors cursor-pointer"
+            >
+              <LogOut size={16} />
+              <span className="hidden sm:inline">Cerrar Sesión</span>
+            </button>
+            <div className="w-10 h-10 bg-zippy-dark rounded-2xl flex items-center justify-center text-white font-black">
+              AD
+            </div>
           </div>
         </header>
 
         {/* ACTIVE SOS BAR */}
         {hasSosAlert && (
-          <div className="bg-red-600 text-white px-6 py-3 flex flex-wrap items-center justify-between gap-3 z-20">
+          <div className="bg-red-600 text-white px-6 py-3 shrink-0 flex flex-wrap items-center justify-between gap-3 z-20">
             <div className="flex items-center gap-3">
               <Siren size={20} className="animate-pulse" />
               <span className="text-xs font-black uppercase">
@@ -595,7 +607,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto relative p-6 md:p-8">
+        <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative p-6 md:p-8">
           {loading && (
             <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-50">
               <Loader2 className="animate-spin text-zippy-dark" size={48} />
