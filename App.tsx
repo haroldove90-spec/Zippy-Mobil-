@@ -18,6 +18,7 @@ function App() {
   // Admin credentials state
   const [adminUser, setAdminUser] = useState('');
   const [adminPass, setAdminPass] = useState('');
+  const [adminError, setAdminError] = useState<string | null>(null);
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -63,14 +64,10 @@ function App() {
 
     // 5. SESSION PERSISTENCE (RESTORE SESSION ON REFRESH)
     const restoreSession = async () => {
-        // A. Check for Admin Local Session
-        const adminSession = localStorage.getItem('zippy-admin-logged');
-        if (adminSession === 'true') {
-            setRole(UserRole.ADMIN);
-            return;
-        }
+        // Limpiar bandera heredada insegura si existiera
+        localStorage.removeItem('zippy-admin-logged');
 
-        // B. Check for Supabase Session
+        // Verificar sesión real de Supabase (incluye ADMIN, PASSENGER, DRIVER, PROVIDER)
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
             // Fetch profile to determine role
@@ -131,20 +128,66 @@ function App() {
     );
   }
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
+    setAdminError(null);
+    const trimmedUser = adminUser.trim();
+
+    if (!trimmedUser || !adminPass) {
+      setAdminError('Ingresa usuario y contraseña.');
+      return;
+    }
+
     setLoading(true);
-    // Credencial de administrador solicitada
-    if (adminUser === 'admin' && adminPass === '123admin') {
-        localStorage.setItem('zippy-admin-logged', 'true'); // Persist Admin
-        setTimeout(() => {
-            setRole(UserRole.ADMIN);
-            setLoading(false);
-            setShowAdminLogin(false);
-        }, 1000);
-    } else {
-        alert("Credenciales de Administrador Incorrectas");
-        setLoading(false);
+    try {
+      const normalizedEmail = trimmedUser.includes('@')
+        ? trimmedUser.toLowerCase()
+        : `${trimmedUser.toLowerCase()}@zippy.admin`;
+
+      // 1. Autenticación primaria contra Supabase Auth (JWT real para RLS)
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: adminPass,
+      });
+
+      if (!authError && authData.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', authData.user.id)
+          .single();
+
+        if (profile?.role === 'ADMIN') {
+          setRole(UserRole.ADMIN);
+          setShowAdminLogin(false);
+          setAdminPass('');
+          return;
+        }
+
+        await supabase.auth.signOut();
+        setAdminError('Esta cuenta no tiene permisos de administrador.');
+        return;
+      }
+
+      // 2. Respaldo validado en servidor vía RPC segura (pgcrypto)
+      const { data: rpcAdmin, error: rpcError } = await supabase.rpc('verify_admin_login', {
+        p_username: trimmedUser,
+        p_password: adminPass,
+      });
+
+      if (!rpcError && Array.isArray(rpcAdmin) && rpcAdmin.length > 0 && rpcAdmin[0]?.role === 'ADMIN') {
+        setRole(UserRole.ADMIN);
+        setShowAdminLogin(false);
+        setAdminPass('');
+        return;
+      }
+
+      setAdminError('Credenciales de Administrador Incorrectas.');
+    } catch (err: unknown) {
+      console.error('Error en inicio de sesión admin:', err);
+      setAdminError('Error al validar credenciales. Verifica que el SQL esté actualizado.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -242,14 +285,19 @@ function App() {
                     <h2 className="text-2xl font-black text-zippy-dark mb-8 text-center uppercase tracking-widest">Admin Control</h2>
                     
                     <form onSubmit={handleAdminLogin} className="space-y-4">
-                        <input required placeholder="Usuario Admin" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-zippy-main font-bold" value={adminUser} onChange={e=>setAdminUser(e.target.value)} />
+                        <input required placeholder="Usuario Admin" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-zippy-main font-bold" value={adminUser} onChange={e=>{ setAdminUser(e.target.value); if (adminError) setAdminError(null); }} />
                         <div className="relative">
-                            <input required type={showPass ? "text" : "password"} placeholder="Contraseña" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-zippy-main font-bold" value={adminPass} onChange={e=>setAdminPass(e.target.value)} />
+                            <input required type={showPass ? "text" : "password"} placeholder="Contraseña" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-zippy-main font-bold" value={adminPass} onChange={e=>{ setAdminPass(e.target.value); if (adminError) setAdminError(null); }} />
                             <button type="button" onClick={()=>setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
                                 {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
                             </button>
                         </div>
-                        <button className="w-full bg-zippy-dark text-white font-black py-4 rounded-2xl shadow-xl hover:bg-zippy-light transition-all flex items-center justify-center gap-2">
+                        {adminError && (
+                          <p className="text-xs font-bold text-red-600 text-center bg-red-50 border border-red-100 rounded-xl py-2 px-3">
+                            {adminError}
+                          </p>
+                        )}
+                        <button disabled={loading} className="w-full bg-zippy-dark text-white font-black py-4 rounded-2xl shadow-xl hover:bg-zippy-light transition-all flex items-center justify-center gap-2 disabled:opacity-60">
                             {loading ? <Loader2 className="animate-spin" /> : 'ACCEDER AL PANEL'}
                         </button>
                     </form>

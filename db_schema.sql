@@ -84,24 +84,53 @@ CREATE TABLE IF NOT EXISTS public.support_tickets (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Función auxiliar segura para verificar rol ADMIN autenticado
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE id = auth.uid()
+      AND role = 'ADMIN'
+      AND COALESCE(is_suspended, FALSE) = FALSE
+  );
+$$;
+
 ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.geofences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow read settings" ON public.app_settings;
-CREATE POLICY "Allow read settings" ON public.app_settings FOR SELECT USING (true);
+CREATE POLICY "Allow read settings" ON public.app_settings
+  FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow write settings" ON public.app_settings;
-CREATE POLICY "Allow write settings" ON public.app_settings FOR ALL USING (true);
+CREATE POLICY "Allow write settings" ON public.app_settings
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 DROP POLICY IF EXISTS "Allow read geofences" ON public.geofences;
-CREATE POLICY "Allow read geofences" ON public.geofences FOR SELECT USING (true);
+CREATE POLICY "Allow read geofences" ON public.geofences
+  FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow write geofences" ON public.geofences;
-CREATE POLICY "Allow write geofences" ON public.geofences FOR ALL USING (true);
+CREATE POLICY "Allow write geofences" ON public.geofences
+  FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 DROP POLICY IF EXISTS "Allow read tickets" ON public.support_tickets;
-CREATE POLICY "Allow read tickets" ON public.support_tickets FOR SELECT USING (true);
+CREATE POLICY "Allow read tickets" ON public.support_tickets
+  FOR SELECT USING (auth.uid() = user_id OR public.is_admin());
+DROP POLICY IF EXISTS "Allow create tickets" ON public.support_tickets;
+CREATE POLICY "Allow create tickets" ON public.support_tickets
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated' AND (user_id IS NULL OR auth.uid() = user_id));
 DROP POLICY IF EXISTS "Allow write tickets" ON public.support_tickets;
-CREATE POLICY "Allow write tickets" ON public.support_tickets FOR ALL USING (true);
+CREATE POLICY "Allow write tickets" ON public.support_tickets
+  FOR UPDATE USING (public.is_admin()) WITH CHECK (public.is_admin());
+DROP POLICY IF EXISTS "Allow delete tickets" ON public.support_tickets;
+CREATE POLICY "Allow delete tickets" ON public.support_tickets
+  FOR DELETE USING (public.is_admin());
 
 -- 6. CORRECCIÓN REALTIME (Bloque seguro para evitar error 42710)
 DO $$
@@ -127,3 +156,157 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
     END IF;
 END $$;
+
+-- 7. CREDENCIALES DE ADMINISTRADOR (Hash bcrypt seguro, sin contraseñas en texto plano)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Tabla privada de administradores (bloqueada para lectura/escritura directa desde clientes)
+CREATE TABLE IF NOT EXISTS public.admin_users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username TEXT UNIQUE NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  full_name TEXT NOT NULL DEFAULT 'Administrador',
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'ADMIN',
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.admin_users FROM anon, authenticated;
+
+-- Registro idempotente del administrador: admin_1
+INSERT INTO public.admin_users (username, email, full_name, password_hash, role, is_active)
+VALUES (
+  'admin_1',
+  'admin_1@zippy.admin',
+  'Administrador Principal',
+  '$2a$10$TwxqGWNNyUcQAhTrE9US8O8JH.BsRYqBG8.hx7K8uv04.3Dy6ob5q',
+  'ADMIN',
+  TRUE
+)
+ON CONFLICT (username) DO UPDATE
+SET email = EXCLUDED.email,
+    password_hash = EXCLUDED.password_hash,
+    role = 'ADMIN',
+    is_active = TRUE,
+    updated_at = NOW();
+
+-- Función RPC segura para validar acceso de administrador en servidor
+CREATE OR REPLACE FUNCTION public.verify_admin_login(p_username TEXT, p_password TEXT)
+RETURNS TABLE (
+  id UUID,
+  username TEXT,
+  full_name TEXT,
+  role TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT au.id, au.username, au.full_name, au.role
+  FROM public.admin_users au
+  WHERE (LOWER(au.username) = LOWER(TRIM(p_username)) OR LOWER(au.email) = LOWER(TRIM(p_username)))
+    AND au.is_active = TRUE
+    AND crypt(p_password, au.password_hash) = au.password_hash
+  LIMIT 1;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.verify_admin_login(TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.verify_admin_login(TEXT, TEXT) TO anon, authenticated;
+
+-- Sincronizar admin_1 en Supabase Auth (auth.users + auth.identities + public.profiles)
+-- Esto permite iniciar sesión con JWT real de Supabase y cumplir todas las políticas RLS.
+DO $$
+DECLARE
+  v_admin_id UUID;
+  v_admin_email CONSTANT TEXT := 'admin_1@zippy.admin';
+  v_password_hash CONSTANT TEXT := '$2a$10$TwxqGWNNyUcQAhTrE9US8O8JH.BsRYqBG8.hx7K8uv04.3Dy6ob5q';
+BEGIN
+  SELECT id INTO v_admin_id FROM auth.users WHERE email = v_admin_email LIMIT 1;
+
+  IF v_admin_id IS NULL THEN
+    v_admin_id := gen_random_uuid();
+
+    INSERT INTO auth.users (
+      instance_id,
+      id,
+      aud,
+      role,
+      email,
+      encrypted_password,
+      email_confirmed_at,
+      raw_app_meta_data,
+      raw_user_meta_data,
+      created_at,
+      updated_at,
+      confirmation_token,
+      email_change,
+      email_change_token_new,
+      recovery_token
+    )
+    VALUES (
+      '00000000-0000-0000-0000-000000000000',
+      v_admin_id,
+      'authenticated',
+      'authenticated',
+      v_admin_email,
+      v_password_hash,
+      NOW(),
+      '{"provider":"email","providers":["email"]}'::jsonb,
+      '{"full_name":"Administrador Principal","username":"admin_1","role":"ADMIN"}'::jsonb,
+      NOW(),
+      NOW(),
+      '',
+      '',
+      '',
+      ''
+    );
+
+    INSERT INTO auth.identities (
+      id,
+      user_id,
+      provider_id,
+      identity_data,
+      provider,
+      last_sign_in_at,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      gen_random_uuid(),
+      v_admin_id,
+      v_admin_id::text,
+      jsonb_build_object(
+        'sub', v_admin_id::text,
+        'email', v_admin_email,
+        'email_verified', true,
+        'phone_verified', false
+      ),
+      'email',
+      NOW(),
+      NOW(),
+      NOW()
+    )
+    ON CONFLICT DO NOTHING;
+  ELSE
+    UPDATE auth.users
+    SET encrypted_password = v_password_hash,
+        email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
+        raw_user_meta_data = COALESCE(raw_user_meta_data, '{}'::jsonb) || '{"username":"admin_1","role":"ADMIN"}'::jsonb,
+        updated_at = NOW()
+    WHERE id = v_admin_id;
+  END IF;
+
+  INSERT INTO public.profiles (id, email, full_name, role)
+  VALUES (v_admin_id, v_admin_email, 'Administrador Principal', 'ADMIN')
+  ON CONFLICT (id) DO UPDATE
+  SET email = EXCLUDED.email,
+      role = 'ADMIN',
+      full_name = COALESCE(public.profiles.full_name, EXCLUDED.full_name);
+END $$;
+
