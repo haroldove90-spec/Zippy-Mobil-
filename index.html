@@ -5,11 +5,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Zippy Taxi</title>
+    <meta name="description" content="Zippy Taxi - El Taxi que va contigo. Viajes justos y seguros." />
+    <meta property="og:title" content="Zippy Taxi" />
+    <meta property="og:description" content="El Taxi que va contigo - Viajes justos y seguros." />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#FDCA01" />
+    <meta name="theme-color" content="#000000" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://tritex.com.mx/zippyicono.png">
+    <link rel="icon" type="image/png" href="https://daloocomercializadora.com.mx/zippyicono.png">
+    <link rel="apple-touch-icon" href="https://daloocomercializadora.com.mx/zippyicono.png">
     
     <!-- Google Maps API -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA4X4KpoFvLTb5cDBcC1WgR-32vrnsjHnY&libraries=places,geometry,marker"></script>
@@ -19,10 +23,11 @@
     
     <style>
       :root {
-        --zippy-main: #FDCA01;
-        --zippy-dark: #003A70;
-        --zippy-light: #004e96;
-        --zippy-accent: #FDCA01;
+        --zippy-main: #F5B901;
+        --zippy-dark: #000000;
+        --zippy-light: #005EDD;
+        --zippy-accent: #F5B901;
+        --zippy-blue: #005EDD;
       }
       html, body, #root {
         height: 100%;
@@ -37,20 +42,20 @@
         overflow: hidden;
       }
       .zippy-shadow {
-        box-shadow: 0 20px 50px -12px rgba(0, 58, 112, 0.15);
+        box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.2);
       }
       .glass-morphism {
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
       }
       .ios-shadow {
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
       }
       ::-webkit-scrollbar { width: 6px; height: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: rgba(0, 58, 112, 0.25); border-radius: 9999px; }
-      ::-webkit-scrollbar-thumb:hover { background: rgba(0, 58, 112, 0.45); }
+      ::-webkit-scrollbar-thumb { background: rgba(0, 94, 221, 0.35); border-radius: 9999px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(0, 94, 221, 0.6); }
     </style>
 
     <script>
@@ -63,6 +68,7 @@
                 dark: 'var(--zippy-dark)',
                 light: 'var(--zippy-light)',
                 accent: 'var(--zippy-accent)',
+                blue: 'var(--zippy-blue)',
               }
             }
           }

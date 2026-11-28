@@ -80,9 +80,9 @@ const MapVisual: React.FC<MapVisualProps> = ({
         suppressMarkers: true,
         preserveViewport: true,
         polylineOptions: {
-            strokeColor: '#003A70',
+            strokeColor: '#005EDD',
             strokeWeight: 6,
-            strokeOpacity: 0.8
+            strokeOpacity: 0.9
         }
     });
     directionsRendererRef.current = renderer;
@@ -100,11 +100,11 @@ const MapVisual: React.FC<MapVisualProps> = ({
       // Si driverLocation es idéntico a userLocation, asumimos que es la vista del Conductor
       const isDriverView = userLocation === driverLocation;
 
-      // Icono: Auto Amarillo para Conductor, Punto Azul para Pasajero
+      // Icono: Auto Dorado Zippy para Conductor, Punto Azul para Pasajero
       const iconConfig = isDriverView ? {
           path: CAR_ICON_PATH,
           scale: 2,
-          fillColor: "#FDCA01",
+          fillColor: "#F5B901",
           fillOpacity: 1,
           strokeWeight: 2,
           strokeColor: "#000000",
@@ -112,7 +112,7 @@ const MapVisual: React.FC<MapVisualProps> = ({
       } : {
           path: google.maps.SymbolPath.CIRCLE,
           scale: draggablePickup ? 10 : 8,
-          fillColor: "#4285F4",
+          fillColor: "#005EDD",
           fillOpacity: 1,
           strokeColor: "white",
           strokeWeight: 3,
@@ -149,10 +149,10 @@ const MapVisual: React.FC<MapVisualProps> = ({
       // Círculo de Precisión
       if (!accuracyCircleRef.current) {
           accuracyCircleRef.current = new google.maps.Circle({
-              strokeColor: "#4285F4",
+              strokeColor: "#005EDD",
               strokeOpacity: 0.4,
               strokeWeight: 1,
-              fillColor: "#4285F4",
+              fillColor: "#005EDD",
               fillOpacity: 0.15,
               map: mapInstanceRef.current,
               center: pos,
@@ -189,7 +189,7 @@ const MapVisual: React.FC<MapVisualProps> = ({
                   icon: {
                       path: CAR_ICON_PATH,
                       scale: 2,
-                      fillColor: "#FDCA01",
+                      fillColor: "#F5B901",
                       fillOpacity: 1,
                       strokeWeight: 2,
                       strokeColor: "#000000",
@@ -228,7 +228,7 @@ const MapVisual: React.FC<MapVisualProps> = ({
 
           const isSos = entity.status === 'SOS';
           const isOnlineFree = entity.status === 'online';
-          const fillColor = isSos ? '#DC2626' : isOnlineFree ? '#22C55E' : '#FDCA01';
+          const fillColor = isSos ? '#DC2626' : isOnlineFree ? '#22C55E' : '#F5B901';
 
           const marker = new google.maps.Marker({
               position: pos,
@@ -241,13 +241,13 @@ const MapVisual: React.FC<MapVisualProps> = ({
                   fillColor,
                   fillOpacity: 1,
                   strokeWeight: 2,
-                  strokeColor: isSos ? '#FFFFFF' : '#003A70',
+                  strokeColor: isSos ? '#FFFFFF' : '#000000',
                   anchor: new google.maps.Point(12, 12),
               },
           });
 
           const infoWindow = new google.maps.InfoWindow({
-              content: `<div style="font-family:Inter,sans-serif;font-size:12px;font-weight:700;color:#003A70;padding:2px 4px;">${entity.label}</div>`,
+              content: `<div style="font-family:Inter,sans-serif;font-size:12px;font-weight:700;color:#000000;padding:2px 4px;">${entity.label}</div>`,
           });
 
           marker.addListener('click', () => {

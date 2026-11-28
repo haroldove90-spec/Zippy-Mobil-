@@ -1,16 +1,16 @@
 
 {
   "name": "Zippy Taxi",
-  "short_name": "Zippy",
+  "short_name": "Zippy Taxi",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FDCA01",
-  "theme_color": "#FDCA01",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "description": "El Taxi que va contigo",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://tritex.com.mx/zippyicono.png",
+      "src": "https://daloocomercializadora.com.mx/zippyicono.png",
       "sizes": "512x512",
       "type": "image/png"
     }

@@ -29,7 +29,7 @@ const NotificationToast: React.FC<NotificationToastProps> = ({ message, type, is
       case 'success': return { bg: 'bg-green-500', icon: CheckCircle, title: '¡Éxito!' };
       case 'warning': return { bg: 'bg-zippy-main', icon: AlertTriangle, title: 'Atención' };
       case 'error': return { bg: 'bg-red-500', icon: XCircle, title: 'Cancelado' };
-      case 'message': return { bg: 'bg-blue-600', icon: MessageSquare, title: 'Nuevo Mensaje' };
+      case 'message': return { bg: 'bg-[#005EDD]', icon: MessageSquare, title: 'Nuevo Mensaje' };
       default: return { bg: 'bg-zippy-dark', icon: BellRing, title: 'Notificación' };
     }
   };
@@ -43,7 +43,7 @@ const NotificationToast: React.FC<NotificationToastProps> = ({ message, type, is
         <div className={`${style.bg} w-2`}></div>
         <div className="p-4 flex items-center gap-3 flex-1">
           <div className={`p-2 rounded-full ${style.bg} bg-opacity-10`}>
-             <Icon size={24} className={type === 'warning' ? 'text-zippy-dark' : 'text-gray-800'} style={{ color: type === 'warning' ? '#003A70' : undefined }} />
+             <Icon size={24} className={type === 'warning' ? 'text-zippy-dark' : 'text-gray-800'} style={{ color: type === 'warning' ? '#000000' : undefined }} />
           </div>
           <div className="flex-1">
             <h4 className="font-black text-zippy-dark text-sm uppercase tracking-wide">{title || style.title}</h4>

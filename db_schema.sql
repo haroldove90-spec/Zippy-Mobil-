@@ -507,4 +507,70 @@ BEGIN
   END LOOP;
 END $$;
 
+-- 9. SINCRONIZACIÓN REALTIME Y RLS ENTRE TODOS LOS MÓDULOS (Pasajero, Conductor, Proveedor y Admin)
+ALTER TABLE public.ride_offers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.provider_requests ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de ride_offers (negociación Pasajero <-> Conductor)
+DROP POLICY IF EXISTS "Enable read ride_offers for authenticated" ON public.ride_offers;
+CREATE POLICY "Enable read ride_offers for authenticated" ON public.ride_offers
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Enable insert ride_offers for driver" ON public.ride_offers;
+CREATE POLICY "Enable insert ride_offers for driver" ON public.ride_offers
+  FOR INSERT WITH CHECK (auth.uid() = driver_id);
+
+DROP POLICY IF EXISTS "Enable update ride_offers for driver or admin" ON public.ride_offers;
+CREATE POLICY "Enable update ride_offers for driver or admin" ON public.ride_offers
+  FOR UPDATE USING (auth.uid() = driver_id OR public.is_admin())
+  WITH CHECK (auth.uid() = driver_id OR public.is_admin());
+
+-- Políticas de provider_requests (auxilio vial Pasajero <-> Proveedor)
+DROP POLICY IF EXISTS "Enable read provider_requests for authenticated" ON public.provider_requests;
+CREATE POLICY "Enable read provider_requests for authenticated" ON public.provider_requests
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Enable insert provider_requests for authenticated" ON public.provider_requests;
+CREATE POLICY "Enable insert provider_requests for authenticated" ON public.provider_requests
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Enable update provider_requests for provider or admin" ON public.provider_requests;
+CREATE POLICY "Enable update provider_requests for provider or admin" ON public.provider_requests
+  FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid()
+        AND role IN ('PROVIDER', 'ADMIN')
+        AND COALESCE(is_suspended, FALSE) = FALSE
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid()
+        AND role IN ('PROVIDER', 'ADMIN')
+        AND COALESCE(is_suspended, FALSE) = FALSE
+    )
+  );
+
+-- Publicación Realtime completa para los 4 módulos (idempotente)
+DO $$
+DECLARE
+  v_tbl TEXT;
+BEGIN
+  FOREACH v_tbl IN ARRAY ARRAY['rides', 'ride_offers', 'messages', 'profiles', 'provider_requests', 'driver_applications', 'support_tickets']
+  LOOP
+    IF EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = v_tbl
+    ) AND NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = v_tbl
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', v_tbl);
+    END IF;
+  END LOOP;
+END $$;
+
 

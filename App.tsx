@@ -28,8 +28,9 @@ function App() {
       setShowSplash(false);
     }, 3000);
 
-    // 2. Load Saved Theme
-    const savedTheme = localStorage.getItem('zippy-theme');
+    // 2. Load Saved Theme (v2 palette: #000000, #F5B901, #005EDD)
+    localStorage.removeItem('zippy-theme');
+    const savedTheme = localStorage.getItem('zippy-theme-v2');
     if (savedTheme) {
       try {
         const theme = JSON.parse(savedTheme);
@@ -88,13 +89,12 @@ function App() {
 
   if (showSplash) {
     return (
-      <div className="fixed inset-0 z-[100] bg-white flex items-center justify-center overflow-hidden">
-        <img 
-           src="https://tritex.com.mx/zippysplash.png" 
-           alt="Zippy Splash" 
-           className="absolute inset-0 w-full h-full object-cover animate-fade-in"
+      <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center p-8 overflow-hidden">
+        <img
+          src="https://daloocomercializadora.com.mx/zippylogo.png"
+          alt="Zippy Taxi"
+          className="w-72 max-w-[80vw] h-auto object-contain animate-fade-in"
         />
-        {/* Spinner removed to leave only the image as splash */}
       </div>
     );
   }
@@ -102,11 +102,11 @@ function App() {
   // API Key Gate
   if (!hasApiKey && window.aistudio) {
     return (
-      <div className="fixed inset-0 z-[100] bg-zippy-main flex flex-col items-center justify-center p-6 animate-fade-in">
-          <img src="https://tritex.com.mx/zippylogo.png" className="h-24 mb-6 filter drop-shadow-xl" alt="Zippy Logo" />
-          <div className="bg-white p-8 rounded-[32px] shadow-2xl max-w-sm w-full text-center">
-              <h2 className="text-xl font-black text-zippy-dark mb-4">Acceso a Gemini API</h2>
-              <p className="text-gray-500 font-bold text-sm mb-6">Para habilitar la inteligencia de Zippy, selecciona tu API Key de Google Cloud.</p>
+      <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-6 animate-fade-in">
+          <img src="https://daloocomercializadora.com.mx/zippylogo.png" className="h-24 mb-6 object-contain" alt="Zippy Taxi Logo" />
+          <div className="bg-white p-8 rounded-[32px] shadow-2xl max-w-sm w-full text-center border-t-4 border-[#F5B901]">
+              <h2 className="text-xl font-black text-black mb-4">Acceso a Gemini API</h2>
+              <p className="text-gray-500 font-bold text-sm mb-6">Para habilitar la inteligencia de Zippy Taxi, selecciona tu API Key de Google Cloud.</p>
               
               <button 
                 onClick={async () => {
@@ -115,12 +115,12 @@ function App() {
                         setHasApiKey(true); 
                     }
                 }}
-                className="w-full bg-zippy-dark text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-transform mb-4"
+                className="w-full bg-[#005EDD] hover:bg-black text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all mb-4"
               >
                 SELECCIONAR API KEY
               </button>
               
-              <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-[10px] font-black text-zippy-dark/40 uppercase tracking-widest underline">
+              <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-[10px] font-black text-black/40 uppercase tracking-widest underline">
                 Información de Facturación
               </a>
           </div>
@@ -213,89 +213,95 @@ function App() {
     if (role === UserRole.PROVIDER) return <ProviderApp onBack={handleBackToHome} />;
 
     return (
-      <div className="w-full h-screen bg-zippy-main flex flex-col items-center justify-center p-6 relative overflow-hidden animate-fade-in transition-colors duration-500">
+      <div className="w-full h-screen h-[100dvh] bg-black flex flex-col items-center justify-center p-6 relative overflow-y-auto animate-fade-in transition-colors duration-500">
         {/* Background Decor */}
-        <div className="absolute top-0 left-0 w-full h-full opacity-30 pointer-events-none">
-           <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] bg-white rounded-full filter blur-[100px]"></div>
-           <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] bg-zippy-accent rounded-full filter blur-[100px]"></div>
+        <div className="absolute top-0 left-0 w-full h-full opacity-25 pointer-events-none overflow-hidden">
+           <div className="absolute top-[-20%] left-[-20%] w-[55%] h-[55%] bg-[#F5B901] rounded-full filter blur-[130px]"></div>
+           <div className="absolute bottom-[-20%] right-[-20%] w-[55%] h-[55%] bg-[#005EDD] rounded-full filter blur-[130px]"></div>
         </div>
 
-        <div className="z-10 text-center mb-10">
-          {/* Logo removed here as requested */}
-          <h1 className="text-3xl font-black text-zippy-dark mb-2">Bienvenido a <span className="text-white">Zippy</span></h1>
-          <p className="text-zippy-dark/70 font-black uppercase text-[10px] tracking-[4px]">El Taxi que va contigo</p>
+        <div className="z-10 text-center mb-8 flex flex-col items-center">
+          <img
+            src="https://daloocomercializadora.com.mx/zippylogo.png"
+            alt="Zippy Taxi"
+            className="h-24 md:h-28 w-auto object-contain mb-4"
+          />
+          <h1 className="text-2xl md:text-3xl font-black text-white mb-1">
+            Bienvenido a <span className="text-[#F5B901]">Zippy Taxi</span>
+          </h1>
+          <p className="text-white/60 font-black uppercase text-[10px] tracking-[4px]">El Taxi que va contigo</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl z-10 animate-slide-up" style={{ animationDelay: '0.2s' }}>
           
           <button 
               onClick={() => setRole(UserRole.PASSENGER)}
-              className="group flex items-center p-4 bg-zippy-dark hover:bg-zippy-light border border-white/20 rounded-2xl transition-all hover:scale-[1.02] shadow-xl"
+              className="group flex items-center p-4 bg-[#111111] hover:bg-[#F5B901] border border-[#F5B901]/40 rounded-2xl transition-all hover:scale-[1.02] shadow-xl"
           >
-              <div className="w-12 h-12 bg-zippy-accent text-zippy-dark rounded-full flex items-center justify-center mr-4 shadow-lg group-hover:rotate-12 transition-transform">
+              <div className="w-12 h-12 bg-[#F5B901] text-black group-hover:bg-black group-hover:text-[#F5B901] rounded-full flex items-center justify-center mr-4 shadow-lg group-hover:rotate-12 transition-all">
                   <User size={24} />
               </div>
               <div className="text-left">
-                  <h3 className="font-bold text-white text-lg">Soy Pasajero</h3>
-                  <p className="text-xs text-gray-300">Solicita viajes rápidos</p>
+                  <h3 className="font-bold text-white group-hover:text-black text-lg transition-colors">Soy Pasajero</h3>
+                  <p className="text-xs text-gray-400 group-hover:text-black/70 transition-colors">Solicita viajes rápidos</p>
               </div>
           </button>
 
           <button 
               onClick={() => setRole(UserRole.DRIVER)}
-              className="group flex items-center p-4 bg-zippy-dark hover:bg-zippy-light border border-white/20 rounded-2xl transition-all hover:scale-[1.02] shadow-xl"
+              className="group flex items-center p-4 bg-[#111111] hover:bg-[#005EDD] border border-[#005EDD]/50 rounded-2xl transition-all hover:scale-[1.02] shadow-xl"
           >
-              <div className="w-12 h-12 bg-white text-zippy-dark rounded-full flex items-center justify-center mr-4 shadow-lg group-hover:rotate-12 transition-transform">
+              <div className="w-12 h-12 bg-[#005EDD] text-white group-hover:bg-white group-hover:text-[#005EDD] rounded-full flex items-center justify-center mr-4 shadow-lg group-hover:rotate-12 transition-all">
                   <Car size={24} />
               </div>
               <div className="text-left">
                   <h3 className="font-bold text-white text-lg">Soy Conductor</h3>
-                  <p className="text-xs text-gray-300">Gana dinero manejando</p>
+                  <p className="text-xs text-gray-400 group-hover:text-white/80 transition-colors">Gana dinero manejando</p>
               </div>
           </button>
 
           <button 
               onClick={() => setRole(UserRole.PROVIDER)}
-              className="group flex items-center p-4 bg-white hover:bg-gray-50 border border-zippy-dark/10 rounded-2xl transition-all hover:scale-[1.02] shadow-xl"
+              className="group flex items-center p-4 bg-white hover:bg-[#F5B901] border border-white/20 rounded-2xl transition-all hover:scale-[1.02] shadow-xl"
           >
-              <div className="w-12 h-12 bg-orange-500 text-white rounded-full flex items-center justify-center mr-4 shadow-lg group-hover:rotate-12 transition-transform">
+              <div className="w-12 h-12 bg-black text-[#F5B901] rounded-full flex items-center justify-center mr-4 shadow-lg group-hover:rotate-12 transition-transform">
                   <Briefcase size={24} />
               </div>
               <div className="text-left">
-                  <h3 className="font-bold text-zippy-dark text-lg">Soy Proveedor</h3>
-                  <p className="text-xs text-gray-500">Grúas, Mecánicos, Seguros...</p>
+                  <h3 className="font-bold text-black text-lg">Soy Proveedor</h3>
+                  <p className="text-xs text-gray-600 group-hover:text-black/75 transition-colors">Grúas, Mecánicos, Seguros...</p>
               </div>
           </button>
 
           <button 
               onClick={() => setShowAdminLogin(true)}
-              className="group flex items-center p-4 bg-gray-800 hover:bg-gray-700 border border-white/20 rounded-2xl transition-all hover:scale-[1.02] shadow-xl"
+              className="group flex items-center p-4 bg-[#141414] hover:bg-[#005EDD] border border-white/15 rounded-2xl transition-all hover:scale-[1.02] shadow-xl"
           >
-              <div className="w-12 h-12 bg-gray-600 text-white rounded-full flex items-center justify-center mr-4 shadow-lg group-hover:rotate-12 transition-transform">
+              <div className="w-12 h-12 bg-white/10 text-[#F5B901] group-hover:bg-black group-hover:text-[#F5B901] rounded-full flex items-center justify-center mr-4 shadow-lg group-hover:rotate-12 transition-all">
                   <ShieldCheck size={24} />
               </div>
               <div className="text-left">
                   <h3 className="font-bold text-white text-lg">Administrador</h3>
-                  <p className="text-xs text-gray-300">Gestión y control</p>
+                  <p className="text-xs text-gray-400 group-hover:text-white/80 transition-colors">Gestión y control</p>
               </div>
           </button>
         </div>
         
-        <p className="absolute bottom-6 text-[10px] font-black text-zippy-dark/40 uppercase tracking-widest">© 2025 Zippy Technologies</p>
+        <p className="mt-8 text-[10px] font-black text-white/40 uppercase tracking-widest z-10">© 2026 Zippy Taxi</p>
 
         {/* ADMIN LOGIN MODAL */}
         {showAdminLogin && (
-            <div className="fixed inset-0 z-[110] bg-zippy-dark/90 backdrop-blur-xl flex items-center justify-center p-6 animate-fade-in">
+            <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 animate-fade-in">
                 <div className="bg-white w-full max-w-sm rounded-[40px] p-10 shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-2 bg-zippy-main"></div>
-                    <button onClick={()=>setShowAdminLogin(false)} className="absolute top-6 right-6 text-gray-400 hover:text-zippy-dark"><ShieldCheck /></button>
+                    <div className="absolute top-0 left-0 w-full h-2 bg-[#F5B901]"></div>
+                    <button onClick={()=>setShowAdminLogin(false)} className="absolute top-6 right-6 text-gray-400 hover:text-black"><ShieldCheck /></button>
                     
-                    <h2 className="text-2xl font-black text-zippy-dark mb-8 text-center uppercase tracking-widest">Admin Control</h2>
+                    <h2 className="text-2xl font-black text-black mb-8 text-center uppercase tracking-widest">Admin Control</h2>
                     
                     <form onSubmit={handleAdminLogin} className="space-y-4">
-                        <input required placeholder="Usuario Admin" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-zippy-main font-bold" value={adminUser} onChange={e=>{ setAdminUser(e.target.value); if (adminError) setAdminError(null); }} />
+                        <input required placeholder="Usuario Admin" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:border-[#005EDD] font-bold text-black" value={adminUser} onChange={e=>{ setAdminUser(e.target.value); if (adminError) setAdminError(null); }} />
                         <div className="relative">
-                            <input required type={showPass ? "text" : "password"} placeholder="Contraseña" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-zippy-main font-bold" value={adminPass} onChange={e=>{ setAdminPass(e.target.value); if (adminError) setAdminError(null); }} />
+                            <input required type={showPass ? "text" : "password"} placeholder="Contraseña" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:border-[#005EDD] font-bold text-black" value={adminPass} onChange={e=>{ setAdminPass(e.target.value); if (adminError) setAdminError(null); }} />
                             <button type="button" onClick={()=>setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
                                 {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
                             </button>
@@ -305,7 +311,7 @@ function App() {
                             {adminError}
                           </p>
                         )}
-                        <button disabled={loading} className="w-full bg-zippy-dark text-white font-black py-4 rounded-2xl shadow-xl hover:bg-zippy-light transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+                        <button disabled={loading} className="w-full bg-black text-[#F5B901] font-black py-4 rounded-2xl shadow-xl hover:bg-[#005EDD] hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-60">
                             {loading ? <Loader2 className="animate-spin" /> : 'ACCEDER AL PANEL'}
                         </button>
                     </form>

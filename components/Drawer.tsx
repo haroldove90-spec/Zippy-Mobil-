@@ -76,7 +76,7 @@ const Drawer: React.FC<DrawerProps> = ({
         <div className="p-6 flex flex-col h-full overflow-y-auto">
           <div className="flex justify-between items-center mb-6">
              <div className="w-28">
-                 <img src="https://tritex.com.mx/zippylogo.png" alt="Zippy Logo" className="w-full object-contain filter drop-shadow-lg" />
+                 <img src="https://daloocomercializadora.com.mx/zippylogo.png" alt="Zippy Taxi Logo" className="w-full object-contain" />
              </div>
              <button onClick={onClose} className="p-2 text-zippy-dark hover:bg-white/20 rounded-full">
                <X className="w-6 h-6" />
@@ -137,7 +137,7 @@ const Drawer: React.FC<DrawerProps> = ({
                 <LogOut className="w-5 h-5" />
                 <span>Cerrar Sesión</span>
              </button>
-             <p className="text-xs text-zippy-dark/60 mt-4 text-center font-semibold">Zippy v2.3.0</p>
+             <p className="text-xs text-zippy-dark/60 mt-4 text-center font-semibold">Zippy Taxi v2.4.0</p>
           </div>
         </div>
       </div>

@@ -4,13 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Registro Conductor Zippy Shield</title>
+    <title>Zippy Taxi - Registro Conductor</title>
+    <link rel="icon" type="image/png" href="https://daloocomercializadora.com.mx/zippyicono.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        :root { --zippy-main: #FDCA01; --zippy-dark: #003A70; }
+        :root { --zippy-main: #F5B901; --zippy-dark: #000000; --zippy-blue: #005EDD; }
         body { font-family: 'Inter', sans-serif; background-color: var(--zippy-dark); color: white; }
         input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="password"] {
             width: 100%; padding: 1rem; border-radius: 1rem; background: rgba(255,255,255,0.05);
@@ -25,7 +26,7 @@
 
     <!-- Header -->
     <div class="p-6 flex items-center justify-between bg-black/20 backdrop-blur-md z-10">
-        <img src="https://tritex.com.mx/zippyicono.png" class="h-8">
+        <img src="https://daloocomercializadora.com.mx/zippyicono.png" alt="Zippy Taxi" class="h-8">
         <div class="flex gap-2" id="steps">
             <!-- Puntos de progreso inyectados por JS -->
         </div>
@@ -161,8 +162,8 @@
                     <p>Al hacer clic en finalizar, declaras que toda la información es real. Aceptas que Zippy verifique tus antecedentes penales y estatus legal de la licencia. El uso de documentos falsos resultará en bloqueo permanente y reporte a las autoridades.</p>
                 </div>
 
-                <label class="flex items-start gap-3 p-4 bg-[#FDCA01]/10 rounded-2xl border border-[#FDCA01] cursor-pointer">
-                    <input type="checkbox" id="contractCheck" class="mt-1 w-5 h-5 accent-[#FDCA01]">
+                <label class="flex items-start gap-3 p-4 bg-[#F5B901]/10 rounded-2xl border border-[#F5B901] cursor-pointer">
+                    <input type="checkbox" id="contractCheck" class="mt-1 w-5 h-5 accent-[#F5B901]">
                     <span class="text-xs font-bold text-white">Acepto los Términos, Condiciones y Política de Privacidad. Entiendo que mi cuenta iniciará en "Revisión".</span>
                 </label>
             </div>
@@ -173,7 +174,7 @@
     <!-- Footer Actions -->
     <div class="p-6 bg-black/20 backdrop-blur-md z-10 flex gap-4">
         <button id="btnBack" class="flex-1 py-4 rounded-2xl bg-white/10 font-black text-xs uppercase hidden" onclick="changeStep(-1)">Atrás</button>
-        <button id="btnNext" class="flex-[2] py-4 rounded-2xl bg-[#FDCA01] text-[#003A70] font-black text-xs uppercase shadow-xl hover:scale-[1.02] transition-transform" onclick="changeStep(1)">Siguiente</button>
+        <button id="btnNext" class="flex-[2] py-4 rounded-2xl bg-[#F5B901] text-[#000000] font-black text-xs uppercase shadow-xl hover:scale-[1.02] transition-transform" onclick="changeStep(1)">Siguiente</button>
     </div>
 
     <script>
@@ -191,7 +192,7 @@
             stepsContainer.innerHTML = '';
             for(let i=1; i<=totalSteps; i++) {
                 const dot = document.createElement('div');
-                dot.className = `w-2 h-2 rounded-full transition-all ${i === currentStep ? 'bg-[#FDCA01] w-6' : 'bg-white/20'}`;
+                dot.className = `w-2 h-2 rounded-full transition-all ${i === currentStep ? 'bg-[#F5B901] w-6' : 'bg-white/20'}`;
                 stepsContainer.appendChild(dot);
             }
             document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
@@ -226,7 +227,7 @@
                 reader.onload = (e) => {
                     const container = document.getElementById(`preview-${id}`);
                     container.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover rounded-xl">`;
-                    container.classList.add('border-[#FDCA01]');
+                    container.classList.add('border-[#F5B901]');
                 };
                 reader.readAsDataURL(file);
             }
@@ -289,13 +290,13 @@
 
                 // Éxito
                 document.body.innerHTML = `
-                    <div class="h-full flex flex-col items-center justify-center bg-[#003A70] text-white p-10 text-center animate-slide-up">
-                        <div class="w-24 h-24 bg-[#FDCA01] rounded-full flex items-center justify-center text-[#003A70] mb-6 shadow-2xl">
+                    <div class="h-full flex flex-col items-center justify-center bg-[#000000] text-white p-10 text-center animate-slide-up">
+                        <div class="w-24 h-24 bg-[#F5B901] rounded-full flex items-center justify-center text-[#000000] mb-6 shadow-2xl">
                             <i data-lucide="shield-check" width="48" height="48"></i>
                         </div>
                         <h1 class="text-3xl font-black mb-2">¡Solicitud en Revisión!</h1>
-                        <p class="opacity-70 mb-8">El equipo legal de Zippy está validando tus documentos. Te notificaremos cuando tu cuenta sea activada.</p>
-                        <a href="/" class="px-8 py-4 bg-white text-[#003A70] font-black rounded-xl uppercase tracking-widest text-xs">Entendido</a>
+                        <p class="opacity-70 mb-8">El equipo legal de Zippy Taxi está validando tus documentos. Te notificaremos cuando tu cuenta sea activada.</p>
+                        <a href="/" class="px-8 py-4 bg-[#005EDD] text-white font-black rounded-xl uppercase tracking-widest text-xs">Entendido</a>
                     </div>
                 `;
                 lucide.createIcons();

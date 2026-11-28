@@ -217,7 +217,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
 
             {/* Messages Area */}
             <div className="flex-1 bg-[#f5f5f5] overflow-y-auto p-4 flex flex-col gap-3 relative">
-                <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#003A70 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+                <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
                 
                 {loadingHistory && (
                     <div className="flex justify-center p-4">
@@ -242,7 +242,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
                         <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} relative z-10 animate-fade-in`}>
                             <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm shadow-sm ${
                                 isMe 
-                                ? 'bg-blue-600 text-white rounded-tr-none' 
+                                ? 'bg-[#005EDD] text-white rounded-tr-none' 
                                 : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
                             }`}>
                                 <p className="leading-snug font-medium">{msg.text}</p>

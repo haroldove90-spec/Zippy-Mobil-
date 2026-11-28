@@ -1807,8 +1807,9 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
             >
               <div className="flex justify-between items-center mb-4">
                 <img
-                  src="https://tritex.com.mx/zippyicono.png"
-                  className="h-6 object-contain filter grayscale opacity-50"
+                  src="https://daloocomercializadora.com.mx/zippyicono.png"
+                  alt="Zippy Taxi"
+                  className="h-6 object-contain opacity-70"
                 />
                 <div className="text-right">
                   <span className="text-[10px] font-bold text-gray-400 uppercase">
@@ -1924,7 +1925,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
               src={
                 avatarPreview ||
                 userProfile.avatar_url ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=003A70&color=fff`
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=000000&color=F5B901`
               }
               className="w-28 h-28 rounded-full border-4 border-zippy-main shadow-2xl overflow-hidden mb-4 object-cover"
             />
@@ -2105,10 +2106,44 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
             onClick={() => setSupportModalOpen(true)}
             className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 flex flex-col items-center gap-3 hover:scale-105 transition-transform"
           >
-            <div className="p-4 bg-green-50 rounded-full text-green-600">
+            <div className="p-4 bg-[#005EDD]/10 rounded-full text-[#005EDD]">
               <LifeBuoy size={32} />
             </div>
             <span className="font-black text-zippy-dark text-xs uppercase">Soporte / Objetos</span>
+          </button>
+        </div>
+
+        <div className="bg-black text-white p-5 rounded-[28px] shadow-lg border border-[#F5B901]/30 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-black text-[#F5B901] text-xs uppercase tracking-widest">
+                Auxilio Vial en Tiempo Real
+              </h4>
+              <p className="text-[11px] text-white/70 font-medium mt-0.5">
+                Envía una solicitud directa a Proveedores (Grúa / Mecánico) conectados
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              const locLabel = pickup || (passengerLocation ? `${passengerLocation[0].toFixed(4)}, ${passengerLocation[1].toFixed(4)}` : 'Ubicación actual');
+              const { error } = await supabase.from('provider_requests').insert({
+                customer_name: userProfile.name || 'Pasajero Zippy Taxi',
+                description: 'Solicitud de auxilio vial / grúa desde la app de pasajero',
+                location_label: locLabel,
+                price: 350,
+                status: 'pending',
+              });
+              if (error) {
+                showToast('No se pudo enviar auxilio vial: ' + error.message, 'error');
+              } else {
+                showToast('Solicitud de auxilio vial enviada a proveedores cercanos.', 'success');
+              }
+            }}
+            className="w-full py-3.5 rounded-2xl bg-[#F5B901] hover:bg-[#005EDD] hover:text-white text-black font-black text-xs uppercase tracking-wider transition-colors"
+          >
+            Solicitar Grúa / Mecánico Ahora
           </button>
         </div>
 
@@ -2218,7 +2253,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
           {status === RideStatus.IDLE && (
             <div className="pointer-events-auto bg-white rounded-t-[40px] p-6 shadow-2xl border-t border-gray-100 animate-slide-up pb-8 max-h-[75vh] overflow-y-auto">
               <div className="text-center mb-4">
-                <img src="https://tritex.com.mx/zippylogo.png" className="h-7 mx-auto mb-1 object-contain" />
+                <img src="https://daloocomercializadora.com.mx/zippylogo.png" alt="Zippy Taxi" className="h-8 mx-auto mb-1 object-contain" />
                 <h2 className="text-xl font-black text-zippy-dark tracking-tight">
                   ¿A dónde <span className="text-zippy-main">vamos?</span>
                 </h2>
@@ -2752,7 +2787,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
           <div className="bg-white p-8 rounded-[40px] w-full max-w-sm shadow-2xl overflow-hidden relative">
             <div className="absolute top-0 left-0 w-full h-2 bg-zippy-main"></div>
             <div className="text-center mb-8">
-              <img src="https://tritex.com.mx/zippylogo.png" className="h-10 mx-auto mb-4 object-contain" />
+              <img src="https://daloocomercializadora.com.mx/zippylogo.png" alt="Zippy Taxi" className="h-12 mx-auto mb-4 object-contain" />
               <h2 className="text-2xl font-black text-zippy-dark uppercase tracking-tight">
                 {authMode === 'login' ? 'Bienvenido' : 'Crear Cuenta'}
               </h2>

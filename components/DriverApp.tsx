@@ -652,26 +652,28 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
       })
       .subscribe();
 
-    const msgChannel = supabase
-      .channel(`driver_messages:${driverProfile.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `ride_id=eq.${activeRide?.id}` },
-        (payload) => {
-          const msg = payload.new as any;
-          if (msg.sender_id !== driverProfile.id) {
-            setChatOpen(true);
-            playSound(SOUNDS.message);
-            speak('Nuevo mensaje del pasajero.');
-            showToast('Nuevo mensaje del pasajero', 'message');
-          }
-        }
-      )
-      .subscribe();
+    const msgChannel = activeRide?.id
+      ? supabase
+          .channel(`driver_messages:${driverProfile.id}:${activeRide.id}`)
+          .on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'messages', filter: `ride_id=eq.${activeRide.id}` },
+            (payload) => {
+              const msg = payload.new as any;
+              if (msg.sender_id !== driverProfile.id) {
+                setChatOpen(true);
+                playSound(SOUNDS.message);
+                speak('Nuevo mensaje del pasajero.');
+                showToast('Nuevo mensaje del pasajero', 'message');
+              }
+            }
+          )
+          .subscribe()
+      : null;
 
     return () => {
       supabase.removeChannel(channel);
-      supabase.removeChannel(msgChannel);
+      if (msgChannel) supabase.removeChannel(msgChannel);
       clearInterval(backupInterval);
     };
   }, [
@@ -1329,7 +1331,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
               src={
                 avatarPreview ||
                 driverProfile.avatarUrl ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(driverProfile.name)}&background=003A70&color=fff`
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(driverProfile.name)}&background=000000&color=F5B901`
               }
               className="w-28 h-28 rounded-full border-4 border-zippy-main shadow-2xl overflow-hidden mb-3 object-cover"
             />
@@ -1578,8 +1580,9 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
           isVisible={toast.visible}
           onClose={() => setToast({ ...toast, visible: false })}
         />
-        <img src="https://tritex.com.mx/zippylogo.png" className="h-12 mb-8 filter invert" />
+        <img src="https://daloocomercializadora.com.mx/zippylogo.png" alt="Zippy Taxi" className="h-16 mb-6 object-contain" />
         <div className="bg-white p-6 rounded-[32px] w-full max-w-sm shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-[#F5B901]"></div>
           <h2 className="text-lg font-black text-center text-zippy-dark mb-4 uppercase tracking-widest">
             {authMode === 'login' ? 'Conductor' : 'Registro'}
           </h2>
@@ -1618,7 +1621,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            <button className="w-full bg-blue-700 text-white font-black py-3 rounded-xl shadow-lg active:scale-95 transition-all uppercase tracking-wide text-xs">
+            <button className="w-full bg-[#005EDD] hover:bg-black text-white font-black py-3 rounded-xl shadow-lg active:scale-95 transition-all uppercase tracking-wide text-xs">
               {loading ? (
                 <Loader2 className="animate-spin mx-auto w-5 h-5" />
               ) : authMode === 'login' ? (
@@ -1630,7 +1633,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
             <button
               type="button"
               onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-              className="w-full text-[10px] font-black text-blue-700 uppercase tracking-widest mt-2 underline text-center block"
+              className="w-full text-[10px] font-black text-[#005EDD] uppercase tracking-widest mt-2 underline text-center block"
             >
               {authMode === 'login' ? 'Regístrate' : 'Inicia Sesión'}
             </button>
@@ -1769,7 +1772,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
             type="button"
             onClick={toggleOnline}
             className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase transition-all shadow-xl active:scale-95 ${
-              isOnline ? 'bg-red-600 text-white' : 'bg-blue-700 text-white'
+              isOnline ? 'bg-red-600 text-white' : 'bg-[#005EDD] text-white'
             }`}
           >
             {isOnline ? 'Finalizar' : 'Iniciar'}
@@ -2101,11 +2104,11 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
             </div>
           </div>
         ) : (
-          <div className="pointer-events-auto bg-blue-950/95 backdrop-blur-2xl rounded-[36px] p-2.5 flex items-center justify-between shadow-2xl border border-white/10 mx-2 mb-2">
+          <div className="pointer-events-auto bg-[#000000]/95 backdrop-blur-2xl rounded-[36px] p-2.5 flex items-center justify-between shadow-2xl border border-white/10 mx-2 mb-2">
             <button
               onClick={() => setView('home')}
               className={`flex-1 flex flex-col items-center py-3.5 rounded-2xl transition-all ${
-                view === 'home' ? 'bg-blue-600 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+                view === 'home' ? 'bg-[#005EDD] text-white shadow-lg' : 'text-white/50 hover:text-white/80'
               }`}
             >
               <Map size={22} />
@@ -2114,7 +2117,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
             <button
               onClick={() => setView('history')}
               className={`flex-1 flex flex-col items-center py-3.5 rounded-2xl transition-all ${
-                view === 'history' ? 'bg-blue-600 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+                view === 'history' ? 'bg-[#005EDD] text-white shadow-lg' : 'text-white/50 hover:text-white/80'
               }`}
             >
               <History size={22} />
@@ -2123,7 +2126,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
             <button
               onClick={() => setView('wallet')}
               className={`flex-1 flex flex-col items-center py-3.5 rounded-2xl transition-all ${
-                view === 'wallet' ? 'bg-blue-600 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+                view === 'wallet' ? 'bg-[#005EDD] text-white shadow-lg' : 'text-white/50 hover:text-white/80'
               }`}
             >
               <Wallet size={22} />
@@ -2132,7 +2135,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
             <button
               onClick={() => setView('profile')}
               className={`flex-1 flex flex-col items-center py-3.5 rounded-2xl transition-all ${
-                view === 'profile' ? 'bg-blue-600 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+                view === 'profile' ? 'bg-[#005EDD] text-white shadow-lg' : 'text-white/50 hover:text-white/80'
               }`}
             >
               <User size={22} />

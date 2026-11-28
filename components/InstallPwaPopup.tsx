@@ -68,11 +68,10 @@ const InstallPwaPopup: React.FC = () => {
         </button>
 
         <div className="relative z-10 flex flex-col items-center mt-4">
-            {/* Icon */}
-            <div className="w-24 h-24 bg-white rounded-2xl p-1 shadow-lg -mt-12 mb-4">
+            <div className="w-24 h-24 bg-black rounded-2xl p-2 shadow-lg -mt-12 mb-4 border-2 border-[#F5B901]">
                 <img 
-                    src="https://tritex.com.mx/zippyicono.png" 
-                    alt="Zippy App Icon" 
+                    src="https://daloocomercializadora.com.mx/zippyicono.png" 
+                    alt="Zippy Taxi Icon" 
                     className="w-full h-full object-contain rounded-xl"
                 />
             </div>
@@ -92,7 +91,7 @@ const InstallPwaPopup: React.FC = () => {
                     </p>
                     <div className="flex items-center justify-between px-2">
                         <span>1. Toca el botón <strong>Compartir</strong></span>
-                        <span className="text-blue-500 text-xl">⎋</span>
+                        <span className="text-[#005EDD] text-xl">⎋</span>
                     </div>
                     <div className="w-full h-px bg-gray-200 my-2"></div>
                     <div className="flex items-center justify-between px-2">
@@ -103,7 +102,7 @@ const InstallPwaPopup: React.FC = () => {
             ) : (
                 <button 
                     onClick={handleInstallClick}
-                    className="w-full bg-zippy-accent hover:bg-yellow-400 text-zippy-dark font-bold py-3 rounded-xl shadow-lg shadow-yellow-500/30 flex items-center justify-center gap-2 transition-transform active:scale-95"
+                    className="w-full bg-[#F5B901] hover:bg-[#005EDD] hover:text-white text-black font-bold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95"
                 >
                     <Download size={20} />
                     Instalar Aplicación

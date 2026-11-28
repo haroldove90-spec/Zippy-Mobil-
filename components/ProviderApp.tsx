@@ -25,7 +25,7 @@ interface ServiceRequest {
 
 const SERVICE_OPTIONS: { id: ProviderCategory; label: string; icon: any; color: string; lightColor: string }[] = [
     { id: 'GRUA', label: 'Grúas y Remolque', icon: Truck, color: 'bg-orange-500', lightColor: 'bg-orange-50' },
-    { id: 'MECANICO', label: 'Taller Mecánico', icon: Wrench, color: 'bg-blue-600', lightColor: 'bg-blue-50' },
+    { id: 'MECANICO', label: 'Taller Mecánico', icon: Wrench, color: 'bg-[#005EDD]', lightColor: 'bg-blue-50' },
     { id: 'AMBULANCIA', label: 'Ambulancia Privada', icon: HeartPulse, color: 'bg-red-600', lightColor: 'bg-red-50' },
     { id: 'LLANTERA', label: 'Llantera Móvil', icon: Disc, color: 'bg-gray-800', lightColor: 'bg-gray-50' },
     { id: 'SEGURO', label: 'Ajustador de Seguros', icon: Shield, color: 'bg-green-600', lightColor: 'bg-green-50' },
@@ -53,25 +53,11 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-      const checkSession = async () => {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-              setUserId(session.user.id);
-              const { data: profileData } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-              if (profileData && profileData.role === 'PROVIDER') {
-                  setProfile(profileData);
-                  setIsOnline(profileData.status === 'online');
-                  setIsAuthenticated(true);
-                  fetchRealRequests();
-              }
-          }
-      };
-      checkSession();
-  }, []);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [todayEarnings, setTodayEarnings] = useState<number>(0);
 
-  const fetchRealRequests = async () => {
-      const { data, error } = await supabase
+  const fetchRealRequests = async (): Promise<void> => {
+      const { data } = await supabase
         .from('provider_requests')
         .select('*')
         .eq('status', 'pending')
@@ -91,6 +77,40 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
           setRequests([]);
       }
   };
+
+  useEffect(() => {
+      const checkSession = async () => {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+              setUserId(session.user.id);
+              const { data: profileData } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+              if (profileData && profileData.role === 'PROVIDER') {
+                  setProfile(profileData);
+                  setIsOnline(profileData.status === 'online');
+                  setIsAuthenticated(true);
+                  fetchRealRequests();
+              }
+          }
+      };
+      checkSession();
+  }, []);
+
+  // Sincronización en tiempo real de solicitudes de auxilio vial
+  useEffect(() => {
+      if (!isAuthenticated || !isOnline) return;
+      fetchRealRequests();
+      const channel = supabase
+        .channel('provider_requests_live')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'provider_requests' }, () => {
+            fetchRealRequests();
+        })
+        .subscribe();
+      const interval = setInterval(fetchRealRequests, 8000);
+      return () => {
+          supabase.removeChannel(channel);
+          clearInterval(interval);
+      };
+  }, [isAuthenticated, isOnline]);
 
   const resolveLoginEmail = (identifier: string): string => {
       const trimmed = identifier.trim().toLowerCase();
@@ -204,9 +224,32 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
       onBack();
   };
 
-  const handleAcceptRequest = (id: string) => {
-      alert(`Servicio #${id} aceptado. Contactando al cliente...`);
+  const handleAcceptRequest = async (id: string): Promise<void> => {
+      const target = requests.find(r => r.id === id);
+      const { data, error } = await supabase
+        .from('provider_requests')
+        .update({ status: 'accepted' })
+        .eq('id', id)
+        .eq('status', 'pending')
+        .select()
+        .maybeSingle();
+
+      if (error) {
+          setStatusMessage('No se pudo aceptar el servicio: ' + error.message);
+          return;
+      }
+      if (!data) {
+          setStatusMessage('Este servicio ya fue tomado por otro proveedor.');
+          setRequests(prev => prev.filter(r => r.id !== id));
+          return;
+      }
+
+      if (target) {
+          setTodayEarnings(prev => prev + (Number(target.price) || 0));
+      }
       setRequests(prev => prev.filter(r => r.id !== id));
+      setStatusMessage(`Servicio aceptado. Contactando a ${target?.customer_name || 'cliente'}...`);
+      setTimeout(() => setStatusMessage(null), 5000);
   };
   
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -256,47 +299,45 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
 
   if (!isAuthenticated) {
       return (
-          <div className="w-full h-screen h-[100dvh] bg-gray-50 flex flex-col items-center justify-center p-6 overflow-y-auto">
+          <div className="w-full h-screen h-[100dvh] bg-black flex flex-col items-center justify-center p-6 overflow-y-auto">
              <div className="w-full max-w-sm">
                 <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-orange-500 rounded-3xl mx-auto flex items-center justify-center shadow-2xl mb-3 animate-bounce">
-                        <Briefcase size={32} className="text-white" />
-                    </div>
-                    <h1 className="text-2xl font-black text-zippy-dark">Zippy Business</h1>
-                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">Servicios de Auxilio Vial</p>
+                    <img src="https://daloocomercializadora.com.mx/zippylogo.png" alt="Zippy Taxi" className="h-16 mx-auto mb-3 object-contain" />
+                    <h1 className="text-2xl font-black text-white">Zippy Taxi <span className="text-[#F5B901]">Business</span></h1>
+                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-1">Servicios de Auxilio Vial</p>
                 </div>
-                <form onSubmit={handleAuth} className="bg-white rounded-[32px] p-6 shadow-2xl space-y-3 border border-gray-100">
-                    <h2 className="text-lg font-black text-center text-zippy-dark uppercase">
+                <form onSubmit={handleAuth} className="bg-white rounded-[32px] p-6 shadow-2xl space-y-3 border-t-4 border-[#F5B901]">
+                    <h2 className="text-lg font-black text-center text-black uppercase">
                         {authMode === 'login' ? 'Ingreso Partner' : 'Registro de Partner'}
                     </h2>
                     {authMode === 'register' && (
                         <>
-                            <input required type="text" value={businessName} onChange={e=>setBusinessName(e.target.value)} className="w-full bg-gray-50 p-3 rounded-xl outline-none border border-gray-100 focus:border-orange-500 font-bold text-sm" placeholder="Nombre del Negocio" />
-                            <input required type="tel" value={phone} onChange={e=>setPhone(e.target.value)} className="w-full bg-gray-50 p-3 rounded-xl outline-none border border-gray-100 focus:border-orange-500 font-bold text-sm" placeholder="Teléfono de contacto" />
+                            <input required type="text" value={businessName} onChange={e=>setBusinessName(e.target.value)} className="w-full bg-gray-50 p-3 rounded-xl outline-none border border-gray-200 focus:border-[#005EDD] font-bold text-sm" placeholder="Nombre del Negocio" />
+                            <input required type="tel" value={phone} onChange={e=>setPhone(e.target.value)} className="w-full bg-gray-50 p-3 rounded-xl outline-none border border-gray-200 focus:border-[#005EDD] font-bold text-sm" placeholder="Teléfono de contacto" />
                             <div className="grid grid-cols-1 gap-2">
                                 <label className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-1">Categoría de Servicio</label>
                                 {SERVICE_OPTIONS.map((opt) => (
-                                    <button key={opt.id} type="button" onClick={() => setSelectedCategory(opt.id)} className={`flex items-center gap-3 p-2 rounded-xl border-2 transition-all ${selectedCategory === opt.id ? 'bg-orange-50 border-orange-500' : 'bg-white border-gray-50'}`}>
+                                    <button key={opt.id} type="button" onClick={() => setSelectedCategory(opt.id)} className={`flex items-center gap-3 p-2 rounded-xl border-2 transition-all ${selectedCategory === opt.id ? 'bg-[#F5B901]/15 border-[#F5B901]' : 'bg-white border-gray-100'}`}>
                                         <div className={`p-1.5 rounded-lg ${opt.color}`}><opt.icon size={14} className="text-white" /></div>
-                                        <span className="text-xs font-black text-zippy-dark">{opt.label}</span>
+                                        <span className="text-xs font-black text-black">{opt.label}</span>
                                     </button>
                                 ))}
                             </div>
                         </>
                     )}
                     
-                    <input required type={authMode === 'login' ? 'text' : 'email'} value={email} onChange={e=>setEmail(e.target.value)} className="w-full bg-gray-50 p-3 rounded-xl outline-none border border-gray-100 focus:border-orange-500 font-bold text-sm" placeholder={authMode === 'login' ? 'Usuario o Correo Electrónico' : 'Correo Electrónico'} />
+                    <input required type={authMode === 'login' ? 'text' : 'email'} value={email} onChange={e=>setEmail(e.target.value)} className="w-full bg-gray-50 p-3 rounded-xl outline-none border border-gray-200 focus:border-[#005EDD] font-bold text-sm" placeholder={authMode === 'login' ? 'Usuario o Correo Electrónico' : 'Correo Electrónico'} />
                     
                     <div className="relative">
-                        <input required type={showPassword ? "text" : "password"} value={password} onChange={e=>setPassword(e.target.value)} className="w-full bg-gray-50 p-3 rounded-xl outline-none border border-gray-100 focus:border-orange-500 font-bold text-sm" placeholder="Contraseña" />
+                        <input required type={showPassword ? "text" : "password"} value={password} onChange={e=>setPassword(e.target.value)} className="w-full bg-gray-50 p-3 rounded-xl outline-none border border-gray-200 focus:border-[#005EDD] font-bold text-sm" placeholder="Contraseña" />
                         <button type="button" onClick={()=>setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
                           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                     </div>
-                    <button className="w-full bg-orange-500 text-white font-black py-3 rounded-xl shadow-xl hover:scale-[1.02] transition-transform uppercase tracking-widest text-xs">
+                    <button className="w-full bg-[#005EDD] hover:bg-black text-white font-black py-3 rounded-xl shadow-xl transition-all uppercase tracking-widest text-xs">
                         {loading ? <Loader2 className="animate-spin mx-auto w-5 h-5" /> : authMode === 'login' ? 'INGRESAR AL PANEL' : 'CREAR CUENTA'}
                     </button>
-                    <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="w-full text-[10px] font-black text-orange-600 uppercase tracking-widest text-center mt-2 underline">
+                    <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="w-full text-[10px] font-black text-[#005EDD] uppercase tracking-widest text-center mt-2 underline">
                         {authMode === 'login' ? '¿Eres nuevo? Regístrate aquí' : '¿Ya tienes cuenta? Entra aquí'}
                     </button>
                     <button type="button" onClick={onBack} className="w-full text-[9px] font-black text-gray-400 uppercase tracking-widest text-center mt-3">Volver al inicio</button>
@@ -366,18 +407,23 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
 
         {/* Dashboard Content */}
         <div className="flex-1 overflow-y-auto p-6 -mt-8 relative z-20">
+            {statusMessage && (
+                <div className="mb-4 p-3.5 rounded-2xl bg-[#005EDD] text-white text-xs font-black text-center shadow-lg">
+                    {statusMessage}
+                </div>
+            )}
             <div className="grid grid-cols-2 gap-4 mb-8">
                 <div className="bg-white p-6 rounded-[32px] shadow-xl border border-gray-100">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Hoy</p>
                     <div className="flex items-center gap-2">
                         <DollarSign size={16} className="text-green-500" />
-                        <span className="text-2xl font-black text-zippy-dark">$1,250</span>
+                        <span className="text-2xl font-black text-zippy-dark">${todayEarnings.toFixed(0)}</span>
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-[32px] shadow-xl border border-gray-100">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Rating</p>
                     <div className="flex items-center gap-2">
-                        <Star size={16} className="text-yellow-500 fill-yellow-500" />
+                        <Star size={16} className="text-[#F5B901] fill-[#F5B901]" />
                         <span className="text-2xl font-black text-zippy-dark">4.9</span>
                     </div>
                 </div>
@@ -385,7 +431,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
 
             <div className="flex justify-between items-center mb-6 px-2">
                 <h3 className="font-black text-zippy-dark uppercase tracking-widest text-sm">Servicios en Zona</h3>
-                <span className="bg-orange-100 text-orange-600 text-[10px] font-black px-3 py-1 rounded-full">{requests.length} NUEVOS</span>
+                <span className="bg-[#005EDD]/10 text-[#005EDD] text-[10px] font-black px-3 py-1 rounded-full">{requests.length} NUEVOS</span>
             </div>
 
             {isOnline ? (

@@ -127,6 +127,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, () => {
         checkSos();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_applications' }, async () => {
+        const { count } = await supabase
+          .from('driver_applications')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+        setStats((prev) => ({ ...prev, pendingApps: count || 0 }));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, async () => {
+        const tickets = await fetchSupportTickets();
+        setSupportTickets(tickets);
+      })
       .subscribe();
 
     return () => {
@@ -519,7 +530,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         }`}
       >
         <div className="p-6 shrink-0 flex justify-between items-center">
-          <img src="https://tritex.com.mx/zippylogo.png" alt="Zippy Admin" className="h-9 object-contain" />
+          <img src="https://daloocomercializadora.com.mx/zippylogo.png" alt="Zippy Taxi Admin" className="h-10 object-contain" />
           <button onClick={() => setSidebarOpen(false)} className="md:hidden text-zippy-dark">
             <X />
           </button>
@@ -1255,7 +1266,7 @@ const UsersTable = ({
               <td className="p-5 text-center">
                 <span
                   className={`px-3 py-1 rounded-full text-[10px] font-black text-white ${
-                    user.role === 'DRIVER' ? 'bg-blue-600' : 'bg-gray-400'
+                    user.role === 'DRIVER' ? 'bg-[#005EDD]' : 'bg-gray-400'
                   }`}
                 >
                   {user.role}
@@ -1320,7 +1331,7 @@ const RidesTable = ({ rides, onDelete }: { rides: Ride[]; onDelete: (id: string)
                     : ride.status === 'REQUESTING'
                     ? 'bg-yellow-500 animate-pulse'
                     : ride.status === 'IN_PROGRESS'
-                    ? 'bg-blue-600'
+                    ? 'bg-[#005EDD]'
                     : ride.status === 'PAYMENT_PENDING'
                     ? 'bg-purple-600'
                     : ride.status === 'CANCELLED'
