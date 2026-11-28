@@ -7,6 +7,7 @@ import {
     User, ChevronRight, XCircle, Camera, Save
 } from 'lucide-react';
 import { supabase } from '../services/supabase';
+import { appAlert } from '../services/uiDialogs';
 import { ProviderCategory } from '../types';
 
 interface ProviderAppProps {
@@ -165,7 +166,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
                       if (profileData) setProfile(profileData);
                       setIsAuthenticated(true);
                   } else {
-                      alert("Registro exitoso. Revisa tu email para confirmar tu cuenta Partner.");
+                      void appAlert("Registro exitoso. Revisa tu email para confirmar tu cuenta Partner.", "Registro completado");
                       setAuthMode('login');
                   }
               }
@@ -192,7 +193,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
               }
           }
       } catch (e: any) { 
-          alert("Error de Registro/Acceso: " + (e.message || "Ocurrió un error inesperado")); 
+          void appAlert("Error de Registro/Acceso: " + (e.message || "Ocurrió un error inesperado"), "Acceso Proveedor"); 
       } finally { 
           setLoading(false); 
       }
@@ -205,7 +206,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
       if (userId) {
           const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', userId);
           if (error) {
-              alert("No se pudo actualizar el estado en red: " + error.message);
+              void appAlert("No se pudo actualizar el estado en red: " + error.message, "Estado de conexión");
               setIsOnline(prev);
           }
       }
@@ -256,7 +257,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size > 5 * 1024 * 1024) {
-        alert("La imagen debe pesar menos de 5MB");
+        void appAlert("La imagen debe pesar menos de 5MB", "Imagen muy grande");
         return;
       }
       setAvatarFile(file);
@@ -289,9 +290,9 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
         setProfile((prev: any) => ({ ...prev, avatar_url: data.publicUrl }));
         setAvatarFile(null);
         setAvatarPreview(null);
-        alert("Logo actualizado correctamente.");
+        void appAlert("Logo actualizado correctamente.", "Perfil actualizado");
     } catch (err: any) {
-        alert("Error al subir imagen: " + err.message);
+        void appAlert("Error al subir imagen: " + err.message, "Error");
     } finally {
         setLoading(false);
     }

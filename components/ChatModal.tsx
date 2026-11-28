@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, X, Phone, User, CheckCheck, Minus, MessageSquareOff, Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '../services/supabase';
+import { appAlert } from '../services/uiDialogs';
 
 interface ChatModalProps {
   isOpen: boolean;
@@ -112,7 +113,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
     if (!input.trim() || sending) return;
     
     if (!rideId) {
-        alert("Error: No hay un viaje activo asociado.");
+        void appAlert("Error: No hay un viaje activo asociado.", "Chat");
         return;
     }
 
@@ -168,7 +169,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
       if (counterpartPhone) {
           window.location.href = `tel:${counterpartPhone}`;
       } else {
-          alert("Número no disponible.");
+          void appAlert("Número telefónico no disponible.", "Llamada");
       }
   };
 

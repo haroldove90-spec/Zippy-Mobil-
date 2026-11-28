@@ -1,100 +1,78 @@
-import { GoogleGenAI, Type } from "@google/genai";
+interface ChatHistoryItem {
+  role: 'user' | 'model';
+  parts: Array<{ text: string }>;
+}
 
-// Initialize client with API key from environment, ensuring fresh instance per call
-const getClient = () => {
-  if (!process.env.API_KEY) return null;
-  // Use named parameter directly from process.env as per guidelines
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
-};
+interface AiErrorResponse {
+  error?: string;
+}
+
+async function callAiEndpoint<T>(payload: Record<string, unknown>): Promise<T> {
+  const response = await fetch('/api/ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await response.json().catch(() => ({}))) as T & AiErrorResponse;
+  if (!response.ok) {
+    throw new Error(data.error || `Error del servicio inteligente (${response.status}).`);
+  }
+  return data;
+}
 
 /**
- * Gets smart price advice for a ride request using Gemini.
+ * Gets smart price advice for a ride request via server-side /api/ai.
  */
-export const getSmartPriceAdvice = async (pickup: string, destination: string, userTarifa: number): Promise<{ advice: string, successProbability: number }> => {
-  const ai = getClient();
-  if (!ai) return { advice: "Sigue con tu tarifa.", successProbability: 50 };
-
+export const getSmartPriceAdvice = async (
+  pickup: string,
+  destination: string,
+  userTarifa: number
+): Promise<{ advice: string; successProbability: number }> => {
   try {
-    const prompt = `
-      Eres el algoritmo de precios de "Zippy". 
-      Origen: ${pickup}. Destino: ${destination}. Tarifa propuesta por el usuario: $${userTarifa}.
-      Calcula:
-      1. Un consejo breve (10 palabras) en español sobre si la tarifa es justa.
-      2. Una probabilidad de aceptación (0-100) basada en que $${userTarifa} sea bajo o alto para el mercado.
-    `;
-    // Configured responseSchema for more reliable JSON extraction as per guidelines
-    const response = await ai.models.generateContent({ 
-      model: 'gemini-3-flash-preview', 
-      contents: prompt,
-      config: { 
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            advice: {
-              type: Type.STRING,
-              description: 'Breve consejo sobre la tarifa.',
-            },
-            prob: {
-              type: Type.NUMBER,
-              description: 'Probabilidad de aceptación del 0 al 100.',
-            },
-          },
-          required: ["advice", "prob"],
-        }
-      }
+    return await callAiEndpoint<{ advice: string; successProbability: number }>({
+      action: 'price_advice',
+      pickup,
+      destination,
+      userTarifa,
     });
-    
-    // Direct access to .text property (not a method)
-    const text = response.text;
-    if (!text) throw new Error("Empty response from AI");
-    const data = JSON.parse(text);
-    return { advice: data.advice, successProbability: data.prob };
-  } catch (error) {
-    console.error("AI Price Advice Error:", error);
-    return { advice: "Los conductores están activos, intenta esta tarifa.", successProbability: 75 };
+  } catch (error: unknown) {
+    console.error('AI Price Advice Error:', error);
+    const message = error instanceof Error ? error.message : 'No se pudo consultar el consejo de tarifa.';
+    return { advice: message, successProbability: 50 };
   }
 };
 
 /**
- * Handles chat interactions with the Zippy AI assistant.
+ * Handles chat interactions with the Zippy AI assistant via server-side /api/ai.
  */
-export const chatWithZippy = async (message: string, history: any[]): Promise<string> => {
-   const ai = getClient();
-   if (!ai) return "Error de conexión.";
-   try {
-     // Create a chat session with history and system instruction
-     const chat = ai.chats.create({
-        model: 'gemini-3-flash-preview',
-        history: history,
-        config: { systemInstruction: "Eres Zippy, el asistente inteligente de una app de taxis que supera a Uber. Eres amable, eficiente y experto en movilidad urbana. Siempre utiliza el término 'Tarifa' en lugar de 'Oferta' al hablar de precios. Responde en Español." }
-     });
-     // Using sendMessage for conversational turn
-     const result = await chat.sendMessage({ message });
-     // Direct access to .text property
-     return result.text || "Lo siento, no pude obtener una respuesta.";
-   } catch (error) {
-     console.error("AI Chat Error:", error);
-     return "Lo siento, mi conexión con el satélite Zippy falló.";
-   }
-}
+export const chatWithZippy = async (message: string, history: ChatHistoryItem[]): Promise<string> => {
+  try {
+    const data = await callAiEndpoint<{ reply: string }>({
+      action: 'chat',
+      message,
+      history,
+    });
+    return data.reply || 'Lo siento, no pude obtener una respuesta.';
+  } catch (error: unknown) {
+    console.error('AI Chat Error:', error);
+    return error instanceof Error ? error.message : 'Error de conexión con el asistente Zippy.';
+  }
+};
 
 /**
- * Generates an executive summary report for the admin dashboard using Gemini.
+ * Generates an executive summary report for the admin dashboard via server-side /api/ai.
  */
 export const generateAdminReport = async (): Promise<string> => {
-  const ai = getClient();
-  if (!ai) return "No se pudo conectar con el motor de inteligencia de Zippy.";
-
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: "Genera un reporte ejecutivo breve (máximo 60 palabras) sobre el estado de las operaciones de hoy. Menciona seguridad, eficiencia y satisfacción del conductor. Responde en Español.",
+    const data = await callAiEndpoint<{ report: string }>({
+      action: 'admin_report',
     });
-    // Direct access to .text property
-    return response.text || "Reporte inteligente no disponible actualmente.";
-  } catch (error) {
-    console.error("AI Report Error:", error);
-    return "Ocurrió un error al procesar el reporte ejecutivo inteligente.";
+    return data.report || 'Reporte inteligente no disponible actualmente.';
+  } catch (error: unknown) {
+    console.error('AI Report Error:', error);
+    return error instanceof Error
+      ? error.message
+      : 'Ocurrió un error al procesar el reporte ejecutivo inteligente.';
   }
 };

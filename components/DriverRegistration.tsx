@@ -6,6 +6,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { supabase } from '../services/supabase';
+import { appAlert } from '../services/uiDialogs';
 
 interface DriverRegistrationProps {
   isOpen: boolean;
@@ -61,7 +62,7 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ isOpen, onClose
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-          alert("La imagen es demasiado pesada. El máximo es 5MB.");
+          void appAlert("La imagen es demasiado pesada. El máximo es 5MB.", "Archivo muy grande");
           return;
       }
       setFiles(prev => ({ ...prev, [key]: file }));
@@ -71,7 +72,7 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ isOpen, onClose
 
   const handleSubmit = async () => {
     if (!formData.fullName || !formData.phone || !formData.email) {
-        alert("Faltan datos personales básicos.");
+        void appAlert("Faltan datos personales básicos.", "Datos incompletos");
         setStep(1);
         return;
     }
@@ -141,7 +142,7 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ isOpen, onClose
       setCompleted(true);
       onRegistrationComplete();
     } catch (err: any) {
-      alert("Error en el Registro de Conductor: " + (err.message || "Error desconocido"));
+      void appAlert("Error en el Registro de Conductor: " + (err.message || "Error desconocido"), "Error de registro");
     } finally {
       setLoading(false);
     }

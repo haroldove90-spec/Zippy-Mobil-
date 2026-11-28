@@ -52,11 +52,13 @@ import {
   updateRideResilient,
   FareQuote,
 } from '../services/rideService';
+import { appAlert, appConfirm } from '../services/uiDialogs';
 
 declare var google: any;
 
 interface PassengerAppProps {
   onBack: () => void;
+  onOpenProvider?: () => void;
 }
 
 const SOUNDS = {
@@ -85,7 +87,7 @@ const speak = (text: string): void => {
   }
 };
 
-const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
+const PassengerApp: React.FC<PassengerAppProps> = ({ onBack, onOpenProvider }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
@@ -1056,7 +1058,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
 
   const handleTriggerSOS = async () => {
     if (!activeRide || !passengerLocation) return;
-    if (!confirm('¿ESTÁS EN PELIGRO? Se enviará alerta SOS con tu ubicación en vivo.')) return;
+    if (!(await appConfirm('¿ESTÁS EN PELIGRO? Se enviará alerta SOS con tu ubicación en vivo.', 'Alerta SOS'))) return;
     try {
       await updateRideResilient(activeRide.id, {
         sos_active: true,
@@ -1226,7 +1228,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
 
   const handleCancelSearch = async () => {
     if (!activeRide) return;
-    if (!confirm('¿Cancelar búsqueda?')) return;
+    if (!(await appConfirm('¿Cancelar búsqueda?', 'Cancelar solicitud'))) return;
     setLoading(true);
     try {
       await updateRideResilient(activeRide.id, { status: RideStatus.CANCELLED });
@@ -1241,7 +1243,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
 
   const handleCancelRide = async () => {
     if (!activeRide) return;
-    if (!confirm('¿Seguro que deseas cancelar el viaje?')) return;
+    if (!(await appConfirm('¿Seguro que deseas cancelar el viaje?', 'Cancelar viaje'))) return;
     try {
       await updateRideResilient(activeRide.id, { status: RideStatus.CANCELLED });
       resetRideState();
@@ -2684,6 +2686,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
         userName={userProfile.name}
         driverApplicationStatus={driverApplicationStatus}
         onOpenDriverStatus={() => setDriverStatusViewOpen(true)}
+        onOpenProvider={onOpenProvider}
       />
       <AssistantModal isOpen={assistantOpen} onClose={() => setAssistantOpen(false)} />
       <EmergencyDirectory isOpen={emergencyOpen} onClose={() => setEmergencyOpen(false)} />
@@ -2975,7 +2978,7 @@ const ScheduleRideModal = ({
   const handleSubmit = () => {
     const scheduledDateTime = new Date(`${date}T${time}`);
     if (scheduledDateTime < new Date()) {
-      alert('Selecciona una hora futura.');
+      void appAlert('Selecciona una hora futura.', 'Fecha inválida');
       return;
     }
     onSchedule(scheduledDateTime.toISOString());

@@ -13,11 +13,12 @@ interface DrawerProps {
   userName?: string;
   driverApplicationStatus: string | null;
   onOpenDriverStatus: () => void;
+  onOpenProvider?: () => void;
 }
 
 const Drawer: React.FC<DrawerProps> = ({ 
   isOpen, onClose, onLogout, onChangeView, onOpenEmergency, onOpenDriverReg, 
-  currentView, userName = "Usuario", driverApplicationStatus, onOpenDriverStatus 
+  currentView, userName = "Usuario", driverApplicationStatus, onOpenDriverStatus, onOpenProvider 
 }) => {
   const handleNav = (view: 'home' | 'profile' | 'history' | 'payment' | 'services') => {
     onChangeView(view);
@@ -125,7 +126,14 @@ const Drawer: React.FC<DrawerProps> = ({
             <div className="mt-6 mb-2">
                 <p className="text-xs font-bold text-zippy-dark/50 uppercase px-3 mb-2">Trabaja con Zippy</p>
                 {renderDriverButton()}
-                <button onClick={() => { alert("Funcionalidad de registro de proveedores disponible próximamente."); }} className="w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium text-zippy-dark hover:bg-zippy-accent/20">
+                <button
+                  onClick={() => {
+                    onClose();
+                    if (onOpenProvider) onOpenProvider();
+                    else handleNav('services');
+                  }}
+                  className="w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium text-zippy-dark hover:bg-zippy-accent/20"
+                >
                     <Briefcase className="w-5 h-5" />
                     <span>Quiero ser Proveedor</span>
                 </button>

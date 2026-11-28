@@ -21,6 +21,7 @@ import {
   updateProfileResilient,
   updateRideResilient,
 } from '../services/rideService';
+import { appConfirm } from '../services/uiDialogs';
 
 interface DriverAppProps {
   onBack: () => void;
@@ -960,7 +961,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
 
   const handleTriggerSOS = async () => {
     if (!activeRide || !currentLocation) return;
-    if (!confirm('¿CONFIRMAS QUE ESTÁS EN PELIGRO?')) return;
+    if (!(await appConfirm('¿CONFIRMAS QUE ESTÁS EN PELIGRO? Se enviará alerta SOS al centro de control.', 'Alerta SOS'))) return;
     try {
       await updateRideResilient(activeRide.id, {
         sos_active: true,

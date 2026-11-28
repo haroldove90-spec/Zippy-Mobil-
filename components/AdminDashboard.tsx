@@ -30,6 +30,7 @@ import {
   updateRideResilient,
   updateSupportTicketStatus,
 } from '../services/rideService';
+import { appAlert, appConfirm, appPrompt } from '../services/uiDialogs';
 
 interface AdminDashboardProps {
   onBack: () => void;
@@ -318,7 +319,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
   }, [activeTab]);
 
   const handleDeleteRide = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar este viaje permanentemente?')) return;
+    if (!(await appConfirm('¿Estás seguro de eliminar este viaje permanentemente?', 'Eliminar viaje'))) return;
     setLoading(true);
     try {
       const { error } = await supabase.rpc('delete_ride_by_admin', { ride_uuid: id });
@@ -328,7 +329,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
       }
       setAdminRides((prev) => prev.filter((r) => r.id !== id));
     } catch (e: any) {
-      alert('Error al eliminar: ' + e.message);
+      void appAlert('Error al eliminar: ' + e.message, 'Error');
     } finally {
       setLoading(false);
     }
@@ -352,9 +353,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
       );
       setDriverApps((prev) => prev.filter((a) => a.id !== app.id));
       setReviewingApp(null);
-      alert('Conductor aprobado y habilitado en la flota Zippy.');
+      void appAlert('Conductor aprobado y habilitado en la flota Zippy Taxi.', 'Conductor aprobado');
     } catch (e: any) {
-      alert('Error en aprobación: ' + e.message);
+      void appAlert('Error en aprobación: ' + e.message, 'Error');
     } finally {
       setLoading(false);
     }
@@ -362,7 +363,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
   const handleRejectDriver = async (app: DriverApplication) => {
     if (!app) return;
-    const reason = prompt('Motivo del rechazo (opcional):');
+    const reason = await appPrompt('Motivo del rechazo (opcional):', '', 'Rechazar solicitud');
+    if (reason === null) return;
     setLoading(true);
     try {
       await supabase.from('driver_applications').update({ status: 'rejected' }).eq('id', app.id);
@@ -371,9 +373,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
       }
       setDriverApps((prev) => prev.filter((a) => a.id !== app.id));
       setReviewingApp(null);
-      alert(`Solicitud rechazada. Motivo: ${reason || 'No especificado'}`);
+      void appAlert(`Solicitud rechazada. Motivo: ${reason || 'No especificado'}`, 'Solicitud rechazada');
     } catch (e: any) {
-      alert('Error al rechazar: ' + e.message);
+      void appAlert('Error al rechazar: ' + e.message, 'Error');
     } finally {
       setLoading(false);
     }
@@ -404,7 +406,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         )
       );
     } catch (e: any) {
-      alert('Error actualizando usuario: ' + e.message);
+      void appAlert('Error actualizando usuario: ' + e.message, 'Error');
     } finally {
       setLoading(false);
     }
@@ -416,7 +418,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
     setLoading(true);
     await saveTariffConfig(tariffConfig);
     setLoading(false);
-    alert('Tarifas y comisiones actualizadas correctamente.');
+    void appAlert('Tarifas y comisiones actualizadas correctamente.', 'Tarifas guardadas');
   };
 
   // --- CREATE / DELETE GEOFENCE ---
@@ -446,7 +448,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
   const handleTicketAction = async (ticket: SupportTicket, status: SupportTicket['status']) => {
     let refundAmount: number | undefined;
     if (status === 'refunded') {
-      const val = prompt('Monto del reembolso (MXN):', '50');
+      const val = await appPrompt('Monto del reembolso (MXN):', '50', 'Emitir reembolso');
       if (val === null) return;
       refundAmount = Number(val) || 0;
     }
@@ -471,7 +473,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
   const handleSendPush = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pushTitle.trim() || !pushMessage.trim()) return alert('Completa el Título y Mensaje.');
+    if (!pushTitle.trim() || !pushMessage.trim()) {
+      void appAlert('Completa el Título y Mensaje.', 'Campos requeridos');
+      return;
+    }
     setPushLoading(true);
     try {
       let dbTarget = 'ALL';
@@ -481,11 +486,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         .from('notifications')
         .insert({ title: pushTitle, message: pushMessage, target: dbTarget });
       if (error) throw error;
-      alert(`¡Notificación enviada con éxito a: ${dbTarget === 'ALL' ? 'TODOS' : dbTarget}!`);
+      void appAlert(
+        `¡Notificación enviada con éxito a: ${dbTarget === 'ALL' ? 'TODOS' : dbTarget}!`,
+        'Notificación enviada'
+      );
       setPushTitle('');
       setPushMessage('');
     } catch (err: any) {
-      alert('Error: ' + (err.message || 'Error de conexión.'));
+      void appAlert('Error: ' + (err.message || 'Error de conexión.'), 'Error');
     } finally {
       setPushLoading(false);
     }

@@ -7,13 +7,13 @@ import DriverApp from './components/DriverApp';
 import AdminDashboard from './components/AdminDashboard';
 import ProviderApp from './components/ProviderApp';
 import InstallPwaPopup from './components/InstallPwaPopup';
+import GlobalDialogHost from './components/GlobalDialogHost';
 import { supabase } from './services/supabase';
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [role, setRole] = useState<UserRole | null>(null);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(false);
   
   // Admin credentials state
   const [adminUser, setAdminUser] = useState('');
@@ -51,19 +51,7 @@ function App() {
       });
     }
 
-    // 4. Check API Key
-    const checkApiKey = async () => {
-      if (window.aistudio) {
-        const has = await window.aistudio.hasSelectedApiKey();
-        setHasApiKey(has);
-      } else {
-        // If aistudio is not available (e.g. standard dev env), allow access.
-        setHasApiKey(true);
-      }
-    };
-    checkApiKey();
-
-    // 5. SESSION PERSISTENCE (RESTORE SESSION ON REFRESH)
+    // 4. SESSION PERSISTENCE (RESTORE SESSION ON REFRESH)
     const restoreSession = async () => {
         // Limpiar bandera heredada insegura si existiera
         localStorage.removeItem('zippy-admin-logged');
@@ -95,35 +83,6 @@ function App() {
           alt="Zippy Taxi"
           className="w-72 max-w-[80vw] h-auto object-contain animate-fade-in"
         />
-      </div>
-    );
-  }
-
-  // API Key Gate
-  if (!hasApiKey && window.aistudio) {
-    return (
-      <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-6 animate-fade-in">
-          <img src="https://daloocomercializadora.com.mx/zippylogo.png" className="h-24 mb-6 object-contain" alt="Zippy Taxi Logo" />
-          <div className="bg-white p-8 rounded-[32px] shadow-2xl max-w-sm w-full text-center border-t-4 border-[#F5B901]">
-              <h2 className="text-xl font-black text-black mb-4">Acceso a Gemini API</h2>
-              <p className="text-gray-500 font-bold text-sm mb-6">Para habilitar la inteligencia de Zippy Taxi, selecciona tu API Key de Google Cloud.</p>
-              
-              <button 
-                onClick={async () => {
-                    if(window.aistudio) {
-                        await window.aistudio.openSelectKey();
-                        setHasApiKey(true); 
-                    }
-                }}
-                className="w-full bg-[#005EDD] hover:bg-black text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all mb-4"
-              >
-                SELECCIONAR API KEY
-              </button>
-              
-              <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-[10px] font-black text-black/40 uppercase tracking-widest underline">
-                Información de Facturación
-              </a>
-          </div>
       </div>
     );
   }
@@ -206,8 +165,19 @@ function App() {
     setRole(null);
   };
 
+  const handleSwitchToProvider = async (): Promise<void> => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err: unknown) {
+      console.error('Error al cambiar a modo proveedor:', err);
+    }
+    setRole(UserRole.PROVIDER);
+  };
+
   const renderContent = () => {
-    if (role === UserRole.PASSENGER) return <PassengerApp onBack={handleBackToHome} />;
+    if (role === UserRole.PASSENGER) {
+      return <PassengerApp onBack={handleBackToHome} onOpenProvider={handleSwitchToProvider} />;
+    }
     if (role === UserRole.DRIVER) return <DriverApp onBack={handleBackToHome} />;
     if (role === UserRole.ADMIN) return <AdminDashboard onBack={handleBackToHome} />;
     if (role === UserRole.PROVIDER) return <ProviderApp onBack={handleBackToHome} />;
@@ -326,6 +296,7 @@ function App() {
     <>
       {renderContent()}
       <InstallPwaPopup />
+      <GlobalDialogHost />
     </>
   );
 }
